@@ -44,6 +44,7 @@
   --color-main-bg: #E2E8F0;
   --color-components-bg: #F9FAFB;
   --color-text-primary: #000000;
+  --color-text-secondary: #867272;
   --color-border: #E5E7EB;
   --color-hover: #f1f5f9; 
   --color-muted: #94a3b8;
@@ -59,6 +60,7 @@
   --color-main-bg: #212A35;
   --color-components-bg: #16182C;
   --color-text-primary: #ffffff;
+  --color-text-secondary: #bfc6ba;
   --color-border: #374151;
   --color-hover: #2d3748; 
   --color-muted: #475569; 
@@ -254,3 +256,4 @@ textarea::-ms-input-placeholder {
 select option[value=""][disabled] {
   color: var(--color-muted);
 }
+
