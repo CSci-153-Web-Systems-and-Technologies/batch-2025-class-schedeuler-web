@@ -24,13 +24,13 @@ export default function LandingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body
-        suppressHydrationWarning
+
+
+      <div
         className={`${PoppinsFont.variable} ${InterFont.variable} font-sans`}
       >
         {children}
-      </body>
-    </html>
+      </div>
+
   );
 }
