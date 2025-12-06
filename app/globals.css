@@ -3,8 +3,11 @@
 :root {
   --primary: 225 73% 57%;
   --primary-foreground: 0 0% 100%;
+  
+
   --secondary: 252 53% 58%;
   --secondary-foreground: 0 0% 100%;
+  
   --background: 210 40% 98%; 
   --foreground: 222 84% 5%;
   --card: 0 0% 100%;
@@ -12,7 +15,7 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222 84% 5%;
   --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%; 
+  --muted-foreground: 215 16% 47%;
   --accent: 210 40% 96%;
   --accent-foreground: 222 84% 5%;
   --destructive: 0 84% 60%;
@@ -41,9 +44,10 @@
   --color-main-bg: #E2E8F0;
   --color-components-bg: #F9FAFB;
   --color-text-primary: #000000;
+  --color-text-secondary: #867272;
   --color-border: #E5E7EB;
   --color-hover: #f1f5f9; 
-  --color-muted: #94a3b8; 
+  --color-muted: #94a3b8;
   --color-breadcrumb-text: #374151;
   --color-breadcrumb-text-hover: #000000;
   --color-breadcrumb-current: #000000;
@@ -56,9 +60,11 @@
   --color-main-bg: #212A35;
   --color-components-bg: #16182C;
   --color-text-primary: #ffffff;
+  --color-text-secondary: #bfc6ba;
   --color-border: #374151;
   --color-hover: #2d3748; 
   --color-muted: #475569; 
+
   --color-breadcrumb-text: #e5e7eb;
   --color-breadcrumb-text-hover: #ffffff;
   --color-breadcrumb-current: #ffffff;
@@ -88,7 +94,6 @@
   --ring: 225 73% 57%;
 } */
 
-/* Tailwind v4 theme configuration */
 @theme {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -117,7 +122,6 @@
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
 
-  /* Your existing custom colors */
   --color-custom-primary: var(--color-primary);
   --color-custom-primary-bg: var(--color-primary-bg);
   --color-custom-gradient: var(--color-gradient);
@@ -173,3 +177,83 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+.rdp-button:hover:not([data-selected-single="true"]):not(.rdp-day_outside):not(.rdp-day_disabled) {
+  background-color: #2F437F !important;
+  color: white !important;
+}
+
+
+.rdp-button[data-selected-single="true"] {
+  background-color: #4169E1 !important;
+  color: white !important;
+}
+
+.rdp-day_outside,
+.rdp-day_disabled {
+  pointer-events: none !important;
+  opacity: 0.4 !important;
+}
+
+.rdp-day_outside:hover,
+.rdp-day_disabled:hover {
+  background-color: transparent !important;
+  color: var(--color-text-primary) !important;
+  opacity: 0.4 !important;
+}
+
+.authenticated.dark .rdp-day_outside,
+.authenticated.dark .rdp-day_disabled {
+  opacity: 0.5 !important;
+  color: var(--color-text-primary) !important;
+}
+
+.rdp-button[data-selected-single="true"]:hover {
+  background-color: #4169E1 !important;
+  color: white !important;
+}
+
+.rdp-button:hover:not([data-selected-single="true"]):not(.rdp-day_outside):not(.rdp-day_disabled) {
+  background-color: #2F437F !important;
+  color: white !important;
+}
+
+.rdp-button[data-selected-single="true"] {
+  background-color: #4169E1 !important;
+  color: white !important;
+}
+
+.rdp-button {
+  border-radius: 9999px !important;
+}
+
+.rdp-button {
+  border-radius: 9999px !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-muted);
+  opacity: 1; 
+}
+
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder {
+  color: var(--color-muted);
+}
+
+input::-moz-placeholder,
+textarea::-moz-placeholder {
+  color: var(--color-muted);
+  opacity: 1;
+}
+
+input::-ms-input-placeholder,
+textarea::-ms-input-placeholder {
+  color: var(--color-muted);
+}
+
+select option[value=""][disabled] {
+  color: var(--color-muted);
+}
+
