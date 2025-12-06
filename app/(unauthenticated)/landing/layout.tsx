@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
-import "./globals.css";
+import "@/app/globals.css";
 
 const InterFont = Inter({
   variable: "--font-inter",
@@ -13,22 +13,21 @@ const PoppinsFont = Poppins({
   subsets: ["latin"],
 });
 
-
 export const metadata: Metadata = {
   title: "Class SchedEuler",
-  description: "A simple class scheduler app built with Next.js and Tailwind CSS.",
+  description: "Plan with ease, no conflicts please!",
 };
 
-export default function RootLayout({
+export default function LandingLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body
-      suppressHydrationWarning
-        className={ `${PoppinsFont.variable} ${InterFont.variable} font-sans` }
+        suppressHydrationWarning
+        className={`${PoppinsFont.variable} ${InterFont.variable} font-sans`}
       >
         {children}
       </body>
