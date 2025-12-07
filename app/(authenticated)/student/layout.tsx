@@ -1,55 +1,25 @@
-// app/(authenticated)/student/layout.tsx (Client Component)
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import StudentSidebar from './components/StudentSidebar';
 import DynamicTopbar from '@/app/(authenticated)/components/DynamicTopbar'; 
 import StudentMobileSidebar from './components/StudentMobileSidebar';
 import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
-import { createClient } from '@/utils/supabase/client'; 
 import { useCurrentTitle } from "@/hooks/useCurrentTitle";
+import { TaskProvider } from './tasks/TaskContext'; 
+import { SubjectProvider } from './subjects/SubjectContext'; 
+import { useUser } from "@/app/context/UserContext";
+import { useAlertSystem } from "@/hooks/useAlertSystem"; 
 
-export default function StudentLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function StudentLayoutContent({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { theme, toggleTheme } = useThemeContext();
-  const [userName, setUserName] = useState("User");
-  const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient(); 
+  const { profile, loading } = useUser();
+  const userName = profile?.name || "User";
+  const userImage = profile?.avatar_url || undefined;
   const currentTitle = useCurrentTitle();
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        setIsLoading(true);
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
 
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('id', user.id)
-            .single();
-
-          if (error) {
-            console.error('Error fetching profile:', error);
-          } else if (profile) {
-            setUserName(profile.name || "User");
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, [supabase]);
+  useAlertSystem();
 
   return (
     <>
@@ -61,6 +31,7 @@ export default function StudentLayout({
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         userName={userName}
+        userImage={userImage} 
         isDarkMode={theme === 'dark'}
         toggleDarkMode={toggleTheme}
       />
@@ -68,7 +39,8 @@ export default function StudentLayout({
       <div className="flex-1 flex flex-col min-h-screen">
         <DynamicTopbar 
           title={currentTitle}
-          userName={isLoading ? "Loading..." : userName} 
+          userName={loading ? "Loading..." : userName} 
+          userImage={userImage} 
           showMobileMenu={true}
           onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         />
@@ -78,5 +50,19 @@ export default function StudentLayout({
         </main>
       </div>
     </>
+  );
+}
+
+export default function StudentLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <SubjectProvider> 
+      <TaskProvider> 
+        <StudentLayoutContent>{children}</StudentLayoutContent>
+      </TaskProvider>
+    </SubjectProvider>
   );
 }
