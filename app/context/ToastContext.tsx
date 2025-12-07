@@ -1,9 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react"; // [FIX] Import AlertTriangle
-
-// [FIX] Add 'warning' to the type definition
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
+import "@/app/globals.css";
 export type ToastType = "success" | "error" | "info" | "warning";
 
 interface Toast {
@@ -11,6 +10,7 @@ interface Toast {
   title: string;
   message?: string;
   type: ToastType;
+  closing?: boolean; // New: Tracks if the toast is currently leaving
 }
 
 interface ToastContextType {
@@ -23,12 +23,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    // 1. Trigger the exit animation first
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, closing: true } : t)));
+
+    // 2. Wait for animation (300ms) before removing from DOM
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 300);
   }, []);
 
   const showToast = useCallback((title: string, message?: string, type: ToastType = "info") => {
     const id = Date.now().toString();
-    const newToast = { id, title, message, type };
+    // Start with closing: false
+    const newToast = { id, title, message, type, closing: false };
     
     setToasts((prev) => [...prev, newToast]);
 
@@ -42,13 +49,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       
-      {/* TOAST CONTAINER */}
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 w-full max-w-sm pointer-events-none">
+      {/* CONTAINER: Fixed to Top-Right */}
+      <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 w-full max-w-sm pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
+            // Apply 'toast-exit' if closing, otherwise 'toast-enter'
             className={`
-              pointer-events-auto flex items-start gap-3 p-4 rounded-lg shadow-lg border transition-all duration-300 animate-in slide-in-from-right-full
+              pointer-events-auto flex items-start gap-3 p-4 rounded-lg shadow-lg border 
+              ${toast.closing ? "toast-exit" : "toast-enter"}
               ${toast.type === 'success' ? 'bg-white border-green-200 dark:bg-slate-800 dark:border-green-900' : ''}
               ${toast.type === 'error' ? 'bg-white border-red-200 dark:bg-slate-800 dark:border-red-900' : ''}
               ${toast.type === 'info' ? 'bg-white border-blue-200 dark:bg-slate-800 dark:border-blue-900' : ''}
@@ -60,7 +69,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-green-500" />}
               {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
               {toast.type === 'info' && <Info className="w-5 h-5 text-blue-500" />}
-              {/* [FIX] Add Warning Icon */}
               {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-500" />}
             </div>
 
