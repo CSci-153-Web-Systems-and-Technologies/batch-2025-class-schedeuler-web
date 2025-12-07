@@ -1,7 +1,9 @@
 // components/AuthenticatedThemeWrapper.tsx
 "use client";
 
+import React from "react";
 import { useThemeContext } from "./ThemeContext"; 
+
 export default function AuthenticatedThemeWrapper({
   children,
 }: {
@@ -12,7 +14,13 @@ export default function AuthenticatedThemeWrapper({
   const themeClasses = theme === 'dark' ? 'authenticated dark' : 'authenticated';
 
   return (
-    <div className={themeClasses}>
+    <div 
+      className={`${themeClasses} min-h-screen w-full transition-colors duration-200`}
+      style={{ 
+        backgroundColor: 'var(--color-main-bg)',
+        color: 'var(--color-text-primary)'
+      }}
+    >
       {children}
     </div>
   );

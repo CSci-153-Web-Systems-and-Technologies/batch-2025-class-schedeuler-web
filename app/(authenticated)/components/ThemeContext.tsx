@@ -11,15 +11,31 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('theme') === 'dark') {
-      return 'dark';
+  // [FIX] Initialize as 'light' to match Server-Side Rendering (SSR)
+  // This prevents the "Hydration Mismatch" error.
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  
+  // [FIX] New Effect: Read storage only after component mounts (Client-side)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        setTheme('dark');
+      }
     }
-    return 'light';
-  });
+  }, []);
 
   useEffect(() => {
+    // 1. Save preference
     localStorage.setItem('theme', theme);
+    
+    // 2. Force Body Background Color
+    if (theme === 'dark') {
+        document.body.style.backgroundColor = '#212A35'; // Dark bg
+    } else {
+        document.body.style.backgroundColor = '#E2E8F0'; // Light bg
+    }
+    
   }, [theme]);
 
   const toggleTheme = () => {
