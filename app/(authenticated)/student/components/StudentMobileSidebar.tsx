@@ -1,10 +1,10 @@
-// app/(authenticated)/student/components/MobileSidebar.tsx
 "use client";
 
 import { X, Bell, Moon, Sun, User, Settings, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar";
 import { logout } from "@/app/(unauthenticated)/(auth)/actions";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/app/context/ToastContext";
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -46,10 +46,16 @@ export default function StudentMobileSidebar({
   toggleDarkMode
 }: MobileSidebarProps) {
   const router = useRouter();
+  const { showToast } = useToast();
   const initials = getInitialsWithoutMiddle(userName);
 
   const handleLogout = async () => {
-    await logout();
+    const result = await logout();
+    if (result?.success) {
+      router.push((result.redirectUrl || '/landing') + '?toast=logout');
+    } else {
+      showToast("Error", "Logout failed", "error");
+    }
     onClose();
   };
 
@@ -174,10 +180,7 @@ export default function StudentMobileSidebar({
             <span>Settings</span>
           </button>
           
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors mt-4"
-          >
+          <button onClick={handleLogout} className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors mt-4">
             <LogOut className="h-4 w-4" />
             <span>Log out</span>
           </button>
