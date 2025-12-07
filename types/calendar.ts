@@ -18,24 +18,17 @@ export interface CalendarEvent {
   title: string;
   type: EventType;
   description?: string;
-  
-  // Date/Time fields
   start: Date;
   end: Date;
+  allDay?: boolean;
   color?: string;
-  
-  // Recurrence (for SUBJECT)
   repeatPattern?: RepeatPattern; 
   repeatUntil?: Date;
-  repeatDays?: number[]; // [0-6] for days of week (0=Sunday, 1=Monday, etc.)
-  excludeDates?: Date[]; // Dates to skip recurrence
-  
-  // Task/Exam specific fields
+  repeatDays?: number[]; 
+  excludeDates?: Date[];
   priority?: 'low' | 'medium' | 'high';
-  taskEstimate?: string; // e.g., "2 hours"
+  taskEstimate?: string;
   completed?: boolean;
-
-  // Subject specific fields
   subjectCode?: string;
   instructor?: string;
   location?: string;
