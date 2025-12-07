@@ -52,6 +52,7 @@ function Button({
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
+      suppressHydrationWarning // [FIX] Prevents Radix ID mismatch errors
       {...props}
     />
   )
