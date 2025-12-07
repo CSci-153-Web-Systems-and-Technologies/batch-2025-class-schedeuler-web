@@ -14,14 +14,13 @@ import {
     DropdownMenuGroup
 } from '@/app/components/ui/Dropdown-menu'; 
 
-// Define extended props interface with current generics
 interface CalendarToolbarProps extends ToolbarProps<CalendarEvent, object> {
   onFilterChange?: (filter: 'all' | EventType) => void;
   filter?: 'all' | EventType;
-  isMobile?: boolean; // Flag to indicate rendering context (< lg screens)
+  availableViews?: View[]; 
 }
 
-const viewOptions: { value: View; label: string }[] = [
+const allViewOptions: { value: View; label: string }[] = [
     { value: 'month', label: 'Month' },
     { value: 'week', label: 'Week' },
     { value: 'day', label: 'Day' },
@@ -34,13 +33,11 @@ const filterOptions: { value: 'all' | EventType; label: string; Icon: React.Elem
     { value: EventType.TASK, label: 'Tasks', Icon: BookOpen },
 ];
 
-// Helper to get the current filter label for the button display
 const getCurrentFilterViewLabel = (view: View, filter: 'all' | EventType) => {
-    const viewLabel = viewOptions.find(o => o.value === view)?.label || 'View';
+    const viewLabel = allViewOptions.find(o => o.value === view)?.label || 'View';
     const filterLabel = filterOptions.find(o => o.value === filter)?.label || 'Filter';
     return `${viewLabel} (${filterLabel})`;
 };
-
 
 const CalendarToolbar: React.FC<CalendarToolbarProps> = ({ 
   date, 
@@ -49,37 +46,27 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
   onFilterChange,
   filter = 'all',
   label,
-  view // This comes from ToolbarProps already
+  view,
+  availableViews = ['month', 'week', 'day']
 }) => {
-  const goToBack = () => {
-    onNavigate('PREV');
-  };
+  
+  const visibleViewOptions = allViewOptions.filter(opt => availableViews.includes(opt.value));
 
-  const goToNext = () => {
-    onNavigate('NEXT');
-  };
+  const goToBack = () => onNavigate('PREV');
+  const goToNext = () => onNavigate('NEXT');
+  const goToToday = () => onNavigate('TODAY');
 
-  const goToToday = () => {
-    onNavigate('TODAY');
-  };
-
-  // Helper to trigger view change
   const handleViewChange = (newView: View) => {
-    if (onView) {
-      onView(newView);
-    }
+    if (onView) onView(newView);
   };
   
-  // Helper to trigger filter change
   const handleFilterChange = (newFilter: 'all' | EventType) => {
-    if (onFilterChange) {
-      onFilterChange(newFilter);
-    }
+    if (onFilterChange) onFilterChange(newFilter);
   };
 
   const renderViewControls = () => (
     <div className="flex bg-[var(--color-hover)] rounded-lg p-1">
-        {viewOptions.map((option) => (
+        {visibleViewOptions.map((option) => (
             <button
                 key={option.value}
                 onClick={() => handleViewChange(option.value)}
@@ -139,10 +126,9 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
             
-            {/* View Selection Group */}
             <DropdownMenuLabel>View</DropdownMenuLabel>
             <DropdownMenuGroup>
-                {viewOptions.map((option) => (
+                {visibleViewOptions.map((option) => (
                     <DropdownMenuItem
                         key={option.value}
                         onSelect={() => handleViewChange(option.value)}
@@ -155,7 +141,6 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
 
             <DropdownMenuSeparator />
 
-            {/* Filter Selection Group */}
             <DropdownMenuLabel>Filter</DropdownMenuLabel>
             <DropdownMenuGroup>
                 {filterOptions.map((option) => (
@@ -176,7 +161,6 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
   return (
     <div className="flex items-center justify-between mb-4">
       
-      {/* LEFT SIDE: Navigation and Date Label */}
       <div className="flex items-center gap-2">
         <Button
           onClick={goToToday}
@@ -209,15 +193,12 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
         </div>
       </div>
 
-      {/* RIGHT SIDE: Conditional Controls */}
       <div className="flex items-center gap-4">
         
-        {/* Mobile/Medium: Combined Dropdown (Hidden on large screens) */}
         <div className="lg:hidden">
             {renderCombinedControls()}
         </div>
 
-        {/* Large Screen: Separate Controls (Hidden on mobile/medium) */}
         <div className="hidden lg:flex items-center gap-4">
             {renderFilterControls()}
             {renderViewControls()}

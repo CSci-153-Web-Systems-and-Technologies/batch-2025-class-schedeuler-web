@@ -14,7 +14,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/app/components/ui/popover";
+} from "@/app/components/ui/Popover";
 import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
 
 const darkenHex = (hex: string, percent: number): string => {
