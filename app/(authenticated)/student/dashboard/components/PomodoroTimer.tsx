@@ -1,3 +1,4 @@
+// app/(authenticated)/student/dashboard/components/PomodoroTimer.tsx
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
@@ -19,12 +20,24 @@ const cycle: Mode[] = [
   "long",
 ];
 
+const modeLabels: Record<Mode, string> = {
+  pomodoro: "Pomodoro Session",
+  short: "Short Break",
+  long: "Long Break",
+};
+
 export default function PomodoroTimer() {
   const [mode, setMode] = useState<Mode>("pomodoro");
   const [timeLeft, setTimeLeft] = useState(modes["pomodoro"]);
   const [cycleIndex, setCycleIndex] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    audioRef.current = new Audio("/sounds/alarm.mp3");
+  }, []);
 
   const handleModeChange = (newMode: Mode) => {
     setMode(newMode);
@@ -32,6 +45,40 @@ export default function PomodoroTimer() {
     setIsRunning(false);
 
     if (intervalRef.current) clearInterval(intervalRef.current);
+  };
+
+  const requestPermission = () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  };
+
+  const handleToggleTimer = () => {
+    if (!isRunning) {
+        requestPermission();
+    }
+    setIsRunning((prev) => !prev);
+  };
+
+  const notifyUser = (finishedMode: Mode) => {
+    if (audioRef.current) {
+      audioRef.current.play().catch((err) => console.error("Audio play failed:", err));
+    }
+
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "granted") {
+        new Notification("SchedEuler Timer", {
+          body: `${modeLabels[finishedMode]} has finished!`,
+          icon: "/icons/schedule.png", 
+          requireInteraction: true, 
+          silent: false,
+        });
+      } else {
+        console.warn("Notifications blocked. Current permission:", Notification.permission);
+      }
+    }
   };
 
   const goToNextMode = () => {
@@ -51,7 +98,8 @@ export default function PomodoroTimer() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(intervalRef.current!);
-
+          
+          notifyUser(mode);
           goToNextMode();
 
           return 0;
@@ -61,7 +109,7 @@ export default function PomodoroTimer() {
     }, 1000);
 
     return () => clearInterval(intervalRef.current!);
-  }, [isRunning, cycleIndex]);
+  }, [isRunning, cycleIndex, mode]); 
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -80,15 +128,14 @@ export default function PomodoroTimer() {
       className="w-full mx-auto p-6 text-white rounded-2xl shadow-lg"
       style={{ backgroundColor: "#78AFE9" }}
     >
-      {/* Tabs */}
       <div
         className="flex justify-between mb-6 p-2 rounded-xl"
         style={{ backgroundColor: "#9FC6F3" }}
       >
         {[
           { label: "Pomodoro", value: "pomodoro" },
-          { label: "Long Break", value: "long" },
           { label: "Short Break", value: "short" },
+          { label: "Long Break", value: "long" },
         ].map((tab) => (
           <button
             key={tab.value}
@@ -115,19 +162,17 @@ export default function PomodoroTimer() {
         ))}
       </div>
 
-      {/* Time */}
       <div className="text-center text-6xl font-bold tracking-wide mb-6">
         {formatTime(timeLeft)}
       </div>
 
-      {/* Controls */}
       <div className="flex justify-center gap-4">
         <button
-          onClick={() => setIsRunning((prev) => !prev)}
+          onClick={handleToggleTimer} 
           className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 hover:scale-105 ${
             isRunning
-              ? "bg-[#4169E1]" // Color when running/paused
-              : "bg-[#78AFE9] hover:bg-[#5A9DE3]" // Color when not running + hover
+              ? "bg-[#4169E1]" 
+              : "bg-[#78AFE9] hover:bg-[#5A9DE3]" 
           }`}
         >
           {isRunning ? "PAUSE" : "START"}
