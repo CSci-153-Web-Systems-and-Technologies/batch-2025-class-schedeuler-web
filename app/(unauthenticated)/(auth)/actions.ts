@@ -1,11 +1,17 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
-
+import { redirect } from 'next/navigation' 
 import { createClient } from '@/utils/supabase/server'
 
-export async function login(prevState: any, formData: FormData) {
+// Standard response type for Auth actions
+type AuthResponse = {
+  success?: boolean;
+  error?: string;
+  redirectUrl?: string;
+} | null;
+
+export async function login(prevState: any, formData: FormData): Promise<AuthResponse> {
   const supabase = await createClient()
 
   const data = {
@@ -20,7 +26,6 @@ export async function login(prevState: any, formData: FormData) {
   }
 
   if (authData.user) {
-
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('account_type')
@@ -31,19 +36,20 @@ export async function login(prevState: any, formData: FormData) {
       return { error: 'Error fetching user profile' }
     }
 
-    if (profile?.account_type === 'instructor') {
-      revalidatePath('/instructor/dashboard', 'layout')
-      redirect('/instructor/dashboard')
-    } else {
-      revalidatePath('/student/dashboard', 'layout')
-      redirect('/student/dashboard')
-    }
+    const url = profile?.account_type === 'instructor' 
+      ? '/instructor/dashboard' 
+      : '/student/dashboard';
+      
+    revalidatePath(url, 'layout')
+    
+    // Return success + URL to let Client handle the redirect
+    return { success: true, redirectUrl: url }
   }
 
   return { error: 'Unknown error occurred' }
 }
 
-export async function signup(prevState: any, formData: FormData) {
+export async function signup(prevState: any, formData: FormData): Promise<AuthResponse> {
   const supabase = await createClient()
 
   const data = {
@@ -80,40 +86,39 @@ export async function signup(prevState: any, formData: FormData) {
     }
 
     const accountType = formData.get('acc-type') as string
-    
-    if (accountType === 'instructor') {
-      revalidatePath('/instructor/dashboard', 'layout')
-      redirect('/instructor/dashboard')
-    } else {
-      revalidatePath('/student/dashboard', 'layout')
-      redirect('/student/dashboard')
-    }
+    const url = accountType === 'instructor' 
+      ? '/instructor/dashboard' 
+      : '/student/dashboard';
+
+    revalidatePath(url, 'layout')
+    return { success: true, redirectUrl: url }
   }
 
   return { error: 'Unknown error occurred' }
 }
 
-export async function logout() {
+export async function logout(): Promise<AuthResponse> {
   const supabase = await createClient()
   
   const { error } = await supabase.auth.signOut()
   
   if (error) {
     console.error('Logout error:', error)
+    return { error: error.message }
   }
   
   revalidatePath('/', 'layout')
-  redirect('/landing')
+  return { success: true, redirectUrl: '/landing' }
 }
 
-// In your actions.ts
+// Google Auth (Must keep server-side redirect)
 export async function signInWithGoogle() {
   const supabase = await createClient()
   
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${getBaseUrl()}/auth/callback`,
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
     },
   })
 
@@ -130,16 +135,4 @@ export async function signInWithGoogle() {
 
 export async function signUpWithGoogle() {
   return signInWithGoogle()
-}
-
-function getBaseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL
-  }
-  
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`
-  }
-  
-  return 'http://localhost:3000'
 }

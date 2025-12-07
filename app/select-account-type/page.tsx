@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
 import { Button } from "@/components/ui/Button"
 import { createClient } from '@/utils/supabase/client'
+import { useToast } from "@/app/context/ToastContext"
 
 export default function SelectAccountType() {
   const [selectedType, setSelectedType] = useState<'student' | 'instructor' | null>(null)
@@ -13,6 +14,7 @@ export default function SelectAccountType() {
   const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createClient()
+  const { showToast } = useToast() 
 
   useEffect(() => {
     const checkUser = async () => {
@@ -56,13 +58,15 @@ export default function SelectAccountType() {
       if (profileError) {
         console.error('Profile creation error:', profileError)
         setError('Error creating profile. Please try again.')
+        showToast("Error", "Failed to create profile", "error")
         setLoading(false)
         return
       }
+
       if (selectedType === 'instructor') {
-        router.push('/instructor/dashboard')
+        router.push('/instructor/dashboard?toast=signup')
       } else {
-        router.push('/student/dashboard')
+        router.push('/student/dashboard?toast=signup')
       }
 
     } catch (err) {

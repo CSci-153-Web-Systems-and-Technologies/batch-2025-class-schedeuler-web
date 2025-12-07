@@ -1,4 +1,4 @@
-// app/auth/callback/routes.ts
+// app/auth/callback/route.ts
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
@@ -9,15 +9,12 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies()
-    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
+          getAll() { return cookieStore.getAll() },
           setAll(cookiesToSet) {
             try {
               cookiesToSet.forEach(({ name, value, options }) =>
@@ -48,11 +45,10 @@ export async function GET(request: Request) {
       if (!existingProfile) {
         return NextResponse.redirect(new URL('/select-account-type', request.url))
       } else {
-        if (existingProfile.account_type === 'instructor') {
-          return NextResponse.redirect(new URL('/instructor/dashboard', request.url))
-        } else {
-          return NextResponse.redirect(new URL('/student/dashboard', request.url))
-        }
+        const dest = existingProfile.account_type === 'instructor' 
+          ? '/instructor/dashboard' 
+          : '/student/dashboard';
+        return NextResponse.redirect(new URL(`${dest}?toast=login`, request.url))
       }
     }
   }
