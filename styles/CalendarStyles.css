@@ -1,6 +1,6 @@
 /* components/Calendar/CalendarStyles.css */
 .calendar-view {
-  padding: 1.5rem;
+  padding: 1.5em;
   height: 100vh;
   background-color: var(--color-main-bg);
 }
@@ -9,24 +9,18 @@
   background-color: var(--color-components-bg);
   border-radius: 0.75rem;
   padding: 1rem;
-  /* Increased height for better visibility in time views */
   height: calc(100vh - 120px);
   border: 1px solid var(--color-border);
 }
 
-/* Increase height of individual 30-minute time slots for Day/Week views */
 .rbc-time-view .rbc-day-slot .rbc-time-slot {
-  min-height: 48px; /* Base slot height */
+  min-height: 48px; 
 }
 
-/* Ensure the rbc-timeslot-group (1 hour) adapts for increased vertical scale */
 .rbc-timeslot-group {
-    min-height: 96px; /* 2 slots * 48px */
+    min-height: 96px;
 }
 
-/* NOTE: Removed the rule for .rbc-month-view .rbc-row to keep Month view cells default height */
-
-/* Override react-big-calendar styles */
 .rbc-calendar {
   color: var(--color-text-primary);
 }
