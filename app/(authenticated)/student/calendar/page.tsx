@@ -1,11 +1,9 @@
-// app/calendar/page.tsx
 'use client';
 
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
-import AuthenticatedThemeWrapper from '@/app/(authenticated)/components/AuthenticatedThemeWrapper'; // Add this
+import AppBreadcrumb from '@/app/components/ui/AppBreadCrumb'; 
 
-// Dynamically import calendar to avoid SSR issues
 const CalendarView = dynamic(() => import('./components/CalendarView'), {
   ssr: false,
   loading: () => (
@@ -17,7 +15,11 @@ const CalendarView = dynamic(() => import('./components/CalendarView'), {
 
 export default function CalendarPage() {
   return (
-    <AuthenticatedThemeWrapper> {/* Wrap with your ThemeWrapper */}
+    <div
+      className="min-h-screen py-6 px-4 sm:px-6 lg:px-8" 
+      style={{ backgroundColor: "var(--color-main-bg)" }}
+    >
+      <AppBreadcrumb />
       <Suspense fallback={
         <div className="h-screen flex items-center justify-center bg-[var(--color-main-bg)]">
           <div className="text-lg text-[var(--color-text-primary)]">Loading...</div>
@@ -25,6 +27,6 @@ export default function CalendarPage() {
       }> 
         <CalendarView />
       </Suspense>
-    </AuthenticatedThemeWrapper>
+    </div>
   );
 }

@@ -4,7 +4,8 @@ import { CalendarEvent, EventType, RepeatPattern } from '@/types/calendar';
 import { SlotInfo } from 'react-big-calendar';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import '@/styles/DatePickerStyles.css'; // Add custom styles for datepicker
+import '@/styles/DatePickerStyles.css'; 
+import { useToast } from '@/app/context/ToastContext'; 
 
 interface EventModalProps {
   event?: CalendarEvent | null;
@@ -12,17 +13,22 @@ interface EventModalProps {
   onSave: (event: CalendarEvent) => void;
   onDelete: () => void;
   onClose: () => void;
+  isScheduleOnly?: boolean; 
 }
 
 const COLOR_OPTIONS = [
-  '#4169e1', // Primary Blue
-  '#52c41a', // Green (for Exams)
-  '#ff4d4f', // Red (for Tasks)
-  '#faad14', // Yellow/Orange
-  '#6a5acd', // Purple
-  '#1abc9c', // Turquoise
-  '#f39c12', // Orange
-  '#e74c3c', // Alizarin Red
+  '#D9F99D', // Lime
+  '#C7D2FE', // Periwinkle 
+  '#FBCFE8', // Rose Pink 
+  '#BAE6FD', // Sky Blue 
+  '#FDE68A', // Soft Yellow
+  '#A7F3D0', // Mint Green
+  '#DDD6FE', // Lavender
+  '#F5D0FE', // Fuchsia
+  '#FECACA', // Soft Red
+  '#FED7AA', // Orange/Peach
+  '#E2E8F0', // Slate/Grey
+  '#99F6E4', // Teal
 ];
 
 const EventModal: React.FC<EventModalProps> = ({
@@ -31,16 +37,29 @@ const EventModal: React.FC<EventModalProps> = ({
   onSave,
   onDelete,
   onClose,
+  isScheduleOnly = false,
 }) => {
+  const { showToast } = useToast(); 
+
+  const defaultEvent = isScheduleOnly 
+    ? {
+        type: EventType.SUBJECT,
+        color: COLOR_OPTIONS[0],
+        repeatPattern: RepeatPattern.WEEKLY, 
+      }
+    : {
+        type: EventType.TASK,
+        color: COLOR_OPTIONS[2],
+        repeatPattern: RepeatPattern.NONE,
+      };
+      
   const [formData, setFormData] = useState<Partial<CalendarEvent>>({
     title: '',
-    type: EventType.TASK,
     description: '',
     start: new Date(),
     end: new Date(),
-    color: COLOR_OPTIONS[0],
     priority: 'medium',
-    repeatPattern: RepeatPattern.NONE, // Added recurrence field
+    ...defaultEvent
   });
 
   useEffect(() => {
@@ -48,42 +67,64 @@ const EventModal: React.FC<EventModalProps> = ({
       const { allDay, ...restEvent } = event as any; 
       setFormData(restEvent);
     } else if (slotInfo) {
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         start: slotInfo.start,
         end: new Date(slotInfo.start.getTime() + 60 * 60 * 1000), 
-        type: EventType.TASK, 
-        color: COLOR_OPTIONS[0], 
-        repeatPattern: RepeatPattern.NONE,
-      });
+      }));
+    } else {
+         setFormData(prev => ({
+            ...prev,
+            title: '',
+            description: '',
+            start: new Date(),
+            end: new Date(new Date().getTime() + 60 * 60 * 1000), 
+            ...defaultEvent
+         }));
     }
-  }, [event, slotInfo]);
+  }, [event, slotInfo, isScheduleOnly]); 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const start = formData.start || new Date();
-    let end = formData.end || new Date(start.getTime() + 60 * 60 * 1000);
-
-    if (start >= end) {
-        end = new Date(start.getTime() + 60 * 60 * 1000);
+    if (!formData.title?.trim()) {
+        showToast("Missing Field", "Please enter a title.", "error");
+        return;
     }
-    
-    // Base object for all events
+
+    if (!formData.start || !formData.end) {
+        showToast("Missing Field", "Start and End times are required.", "error");
+        return;
+    }
+
+    if (formData.start >= formData.end) {
+        showToast("Invalid Time", "End time must be after start time.", "error");
+        return;
+    }
+
+    if (formData.type === EventType.SUBJECT && formData.repeatPattern === RepeatPattern.WEEKLY) {
+        if (!formData.repeatDays || formData.repeatDays.length === 0) {
+            showToast("Missing Field", "Please select at least one day for weekly repetition.", "error");
+            return;
+        }
+    }
+
+    const start = formData.start;
+    let end = formData.end;
+
     const baseEvent: CalendarEvent = {
       id: event?.id || Date.now().toString(),
-      title: formData.title || '',
+      title: formData.title,
       type: formData.type || EventType.TASK,
       description: formData.description,
       start: start,
       end: end,
       color: formData.color,
-    } as CalendarEvent; // Cast to ensure base required fields exist
+    } as CalendarEvent; 
 
     let finalEvent: CalendarEvent;
 
     if (formData.type === EventType.SUBJECT) {
-        // Subject-specific logic
         finalEvent = {
             ...baseEvent,
             type: EventType.SUBJECT,
@@ -96,17 +137,18 @@ const EventModal: React.FC<EventModalProps> = ({
             excludeDates: formData.excludeDates || [],
         };
     } else {
-        // Task/Exam-specific logic
         finalEvent = {
             ...baseEvent,
-            repeatPattern: RepeatPattern.NONE, // Ensure non-subject events don't recur
+            repeatPattern: RepeatPattern.NONE, 
             ...(formData.type === EventType.TASK && {
                 completed: formData.completed || false,
                 priority: formData.priority || 'medium',
-                taskEstimate: formData.taskEstimate,
+                taskEstimate: formData.taskEstimate || (formData.completed ? '100%' : '0%'), 
+                subjectCode: formData.subjectCode, 
             }),
             ...(formData.type === EventType.EXAM && {
                 completed: false,
+                subjectCode: formData.subjectCode,
             })
         };
     }
@@ -119,9 +161,9 @@ const EventModal: React.FC<EventModalProps> = ({
   };
   
   const isSubject = formData.type === EventType.SUBJECT;
+  const isTaskOrExam = formData.type === EventType.TASK || formData.type === EventType.EXAM;
   const isTask = formData.type === EventType.TASK;
 
-  // Day mapping for recurrence selection (0=Sun, 1=Mon, ...)
   const dayMap = [
     { value: 1, label: 'Mon' }, { value: 2, label: 'Tue' }, { value: 3, label: 'Wed' }, 
     { value: 4, label: 'Thu' }, { value: 5, label: 'Fri' }, { value: 6, label: 'Sat' }, 
@@ -140,69 +182,71 @@ const EventModal: React.FC<EventModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      {/* Scroll fix: Use flex-col and max-h to contain content and apply overflow to inner div */}
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-[var(--color-components-bg)] rounded-lg p-6 w-full max-w-md border border-[var(--color-border)] flex flex-col max-h-[90vh]">
         <h2 className="text-xl font-bold mb-4 text-[var(--color-text-primary)] flex-shrink-0">
-          {event ? 'Edit Event' : 'Create New Event'}
+          {event 
+            ? 'Edit Event' 
+            : (isScheduleOnly ? 'Create New Subject' : 'Create New Event')
+          }
         </h2>
 
-        {/* Form Content Wrapper: Allows scrolling */}
-        <div className="overflow-y-auto flex-grow pr-2"> 
+        <div className="overflow-y-auto flex-grow px-2"> 
           <form onSubmit={handleSubmit}>
-            {/* Event Type Selection */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">Event Type</label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className={`px-4 py-2 rounded transition-colors ${
-                    formData.type === EventType.SUBJECT 
-                      ? 'bg-[var(--color-primary)] text-white' 
-                      : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
-                  }`}
-                  onClick={() => setFormData({...formData, type: EventType.SUBJECT, repeatPattern: RepeatPattern.WEEKLY})}
-                >
-                  Subject
-                </button>
-                <button
-                  type="button"
-                  className={`px-4 py-2 rounded transition-colors ${
-                    formData.type === EventType.TASK 
-                      ? 'bg-[var(--color-primary)] text-white' 
-                      : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
-                  }`}
-                  onClick={() => setFormData({...formData, type: EventType.TASK, repeatPattern: RepeatPattern.NONE})}
-                >
-                  Task/Homework
-                </button>
-                <button
-                  type="button"
-                  className={`px-4 py-2 rounded transition-colors ${
-                    formData.type === EventType.EXAM 
-                      ? 'bg-[var(--color-primary)] text-white' 
-                      : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
-                  }`}
-                  onClick={() => setFormData({...formData, type: EventType.EXAM, repeatPattern: RepeatPattern.NONE})}
-                >
-                  Exam
-                </button>
+            {!isScheduleOnly && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">Event Type</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded transition-colors ${
+                      formData.type === EventType.SUBJECT 
+                        ? 'bg-[var(--color-primary)] text-white' 
+                        : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
+                    }`}
+                    onClick={() => setFormData({...formData, type: EventType.SUBJECT, repeatPattern: RepeatPattern.WEEKLY, color: COLOR_OPTIONS[0]})}
+                  >
+                    Subject
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded transition-colors ${
+                      formData.type === EventType.TASK 
+                        ? 'bg-[var(--color-primary)] text-white' 
+                        : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
+                    }`}
+                    onClick={() => setFormData({...formData, type: EventType.TASK, repeatPattern: RepeatPattern.NONE, color: COLOR_OPTIONS[2]})}
+                  >
+                    Task/Homework
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded transition-colors ${
+                      formData.type === EventType.EXAM 
+                        ? 'bg-[var(--color-primary)] text-white' 
+                        : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
+                    }`}
+                    onClick={() => setFormData({...formData, type: EventType.EXAM, repeatPattern: RepeatPattern.NONE, color: COLOR_OPTIONS[1]})}
+                  >
+                    Exam
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Title */}
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Title</label>
+              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                Title <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
-                className="w-full p-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 value={formData.title || ''}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                 required
               />
             </div>
 
-            {/* Color Selector */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Color</label>
               <div className="flex flex-wrap gap-2">
@@ -222,10 +266,9 @@ const EventModal: React.FC<EventModalProps> = ({
               </div>
             </div>
             
-            {/* Start Time */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                Start Time
+                Start Time <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-2">
                 <DatePicker
@@ -234,15 +277,14 @@ const EventModal: React.FC<EventModalProps> = ({
                   showTimeSelect
                   timeIntervals={15}
                   dateFormat="MMMM d, yyyy h:mm aa"
-                  className="w-full p-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 />
               </div>
             </div>
 
-            {/* End Time */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                End Time
+                End Time <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-2">
                   <DatePicker
@@ -251,30 +293,29 @@ const EventModal: React.FC<EventModalProps> = ({
                       showTimeSelect
                       timeIntervals={15}
                       dateFormat="MMMM d, yyyy h:mm aa"
-                      className="w-full p-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                      className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     />
               </div>
             </div>
             
-            {/* --- SUBJECT SPECIFIC FIELDS --- */}
             {isSubject && (
               <>
-                {/* Subject Code, Instructor, Location */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                     <div>
                         <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Subject Code</label>
                         <input
                             type="text"
-                            className="w-full p-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                            className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                             value={formData.subjectCode || ''}
                             onChange={(e) => setFormData({...formData, subjectCode: e.target.value})}
+                            placeholder="e.g. CS401"
                         />
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Location</label>
                         <input
                             type="text"
-                            className="w-full p-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                            className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                             value={formData.location || ''}
                             onChange={(e) => setFormData({...formData, location: e.target.value})}
                         />
@@ -284,19 +325,35 @@ const EventModal: React.FC<EventModalProps> = ({
                     <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Instructor</label>
                     <input
                         type="text"
-                        className="w-full p-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                        className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                         value={formData.instructor || ''}
                         onChange={(e) => setFormData({...formData, instructor: e.target.value})}
                     />
                 </div>
+              </>
+            )}
+            
+            {isTaskOrExam && (
+                 <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Subject Name (For Task/Exam)</label>
+                    <input
+                        type="text"
+                        className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                        value={formData.subjectCode || ''}
+                        onChange={(e) => setFormData({...formData, subjectCode: e.target.value})}
+                        placeholder="e.g. Web Systems"
+                    />
+                </div>
+            )}
 
-                {/* Recurrence Pattern */}
+            {isSubject && (
+              <>
                 <div className="mb-4">
                     <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Repeat</label>
                     <select
-                        className="w-full p-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                        className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                         value={formData.repeatPattern || RepeatPattern.NONE}
-                        onChange={(e) => setFormData({...formData, repeatPattern: e.target.value as RepeatPattern, repeatDays: undefined})}
+                        onChange={(e) => setFormData({...formData, repeatPattern: e.target.value as RepeatPattern})}
                     >
                         <option value={RepeatPattern.NONE}>Does not repeat</option>
                         <option value={RepeatPattern.DAILY}>Daily</option>
@@ -305,10 +362,11 @@ const EventModal: React.FC<EventModalProps> = ({
                     </select>
                 </div>
 
-                {/* Weekly Day Selection */}
                 {formData.repeatPattern === RepeatPattern.WEEKLY && (
                     <div className="mb-4">
-                        <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Repeat Days</label>
+                        <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
+                            Repeat Days <span className="text-red-500">*</span>
+                        </label>
                         <div className="flex flex-wrap gap-2">
                             {dayMap.map((day) => (
                                 <button
@@ -328,7 +386,6 @@ const EventModal: React.FC<EventModalProps> = ({
                     </div>
                 )}
 
-                {/* Repeat Until Date */}
                 {formData.repeatPattern !== RepeatPattern.NONE && (
                     <div className="mb-4">
                         <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Repeat Until (Optional)</label>
@@ -338,20 +395,19 @@ const EventModal: React.FC<EventModalProps> = ({
                             dateFormat="MMMM d, yyyy"
                             isClearable
                             placeholderText="Select date"
-                            className="w-full p-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                            className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                         />
                     </div>
                 )}
               </>
             )}
 
-            {/* --- TASK SPECIFIC FIELDS --- */}
             {isTask && (
               <>
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Priority</label>
                   <select
-                    className="w-full p-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     value={formData.priority || 'medium'}
                     onChange={(e) => setFormData({...formData, priority: e.target.value as any})}
                   >
@@ -365,10 +421,10 @@ const EventModal: React.FC<EventModalProps> = ({
                   <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Estimate (e.g., 2 hours)</label>
                   <input
                     type="text"
-                    className="w-full p-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     value={formData.taskEstimate || ''}
                     onChange={(e) => setFormData({...formData, taskEstimate: e.target.value})}
-                    placeholder="e.g. 2 hours"
+                    placeholder="e.g. 2 hours / 50%"
                   />
                 </div>
               </>
@@ -376,7 +432,6 @@ const EventModal: React.FC<EventModalProps> = ({
           </form>
         </div>
 
-        {/* Buttons - flex-shrink-0 keeps buttons pinned */}
         <div className="flex justify-end gap-2 mt-6 flex-shrink-0">
           {event && (
             <button
@@ -395,7 +450,8 @@ const EventModal: React.FC<EventModalProps> = ({
             Cancel
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             className="px-4 py-2 bg-[var(--color-primary)] text-white rounded hover:opacity-90 transition-colors"
           >
             Save
