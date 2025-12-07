@@ -48,6 +48,7 @@
   --color-border: #E5E7EB;
   --color-hover: #f1f5f9; 
   --color-muted: #94a3b8;
+  --color-muted-fg: rgb(59, 59, 59);
   --color-breadcrumb-text: #374151;
   --color-breadcrumb-text-hover: #000000;
   --color-breadcrumb-current: #000000;
@@ -64,7 +65,7 @@
   --color-border: #374151;
   --color-hover: #2d3748; 
   --color-muted: #475569; 
-
+  --color-muted-fg: #c1c1c1;
   --color-breadcrumb-text: #e5e7eb;
   --color-breadcrumb-text-hover: #ffffff;
   --color-breadcrumb-current: #ffffff;
@@ -257,3 +258,38 @@ select option[value=""][disabled] {
   color: var(--color-muted);
 }
 
+
+@media print {
+
+  aside, 
+  header, 
+  .export-panel, 
+  .add-subject-btn,
+  button, 
+  .breadcrumb,
+  nav {
+    display: none !important;
+  }
+
+  .calendar-container {
+    width: 100% !important;
+    height: auto !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  @page {
+    margin: 0.5cm;
+    size: landscape;
+  }
+  
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

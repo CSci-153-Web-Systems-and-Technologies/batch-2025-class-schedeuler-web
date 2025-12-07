@@ -9,7 +9,49 @@ import {
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
-import { Button, buttonVariants } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/app/components/ui/Button"; 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/app/components/ui/popover";
+import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
+
+const darkenHex = (hex: string, percent: number): string => {
+  if (!hex || hex.startsWith('var')) return hex;
+
+  let color = hex.replace(/^#/, '');
+  
+  if (color.length === 3) {
+    color = color.split('').map(c => c + c).join('');
+  }
+
+  const num = parseInt(color, 16);
+  let r = (num >> 16) & 255;
+  let g = (num >> 8) & 255;
+  let b = num & 255;
+
+  r = Math.floor(r * (100 - percent) / 100);
+  g = Math.floor(g * (100 - percent) / 100);
+  b = Math.floor(b * (100 - percent) / 100);
+
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+
+  const newHex = ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+  return `#${newHex}`;
+};
+
+export interface CalendarMarker {
+  date: Date;
+  events: {
+    title: string;
+    color: string;
+    type?: string;
+    time?: string;
+  }[];
+}
 
 function Calendar({
   className,
@@ -19,9 +61,11 @@ function Calendar({
   buttonVariant = "ghost",
   formatters,
   components,
+  markedDates = [], 
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"];
+  markedDates?: CalendarMarker[];
 }) {
   const defaultClassNames = getDefaultClassNames();
 
@@ -42,9 +86,9 @@ function Calendar({
         ...formatters,
       }}
       classNames={{
-        root: cn("w-fit", defaultClassNames.root),
+        root: cn("w-full", defaultClassNames.root),
         months: cn(
-          "flex gap-4 flex-col md:flex-row relative",
+          "flex gap-4 flex-col md:flex-row relative w-full",
           defaultClassNames.months
         ),
         month: cn("flex flex-col w-full gap-4", defaultClassNames.month),
@@ -88,8 +132,8 @@ function Calendar({
             : "rounded-md pl-2 pr-1 flex items-center gap-1 text-sm h-8",
           defaultClassNames.caption_label
         ),
-        table: "w-full border-collapse",
-        weekdays: cn("flex", defaultClassNames.weekdays),
+        table: "w-full border-collapse", 
+        weekdays: cn("flex w-full", defaultClassNames.weekdays),
         weekday: cn(
           "text-[var(--color-text-primary)] opacity-70 rounded-md flex-1 font-normal text-[0.8rem] select-none",
           defaultClassNames.weekday
@@ -104,7 +148,7 @@ function Calendar({
           defaultClassNames.week_number
         ),
         day: cn(
-          "relative w-full h-full p-0 text-center group/day aspect-square select-none",
+          "relative w-full h-full p-0 text-center group/day aspect-square select-none flex-1", // Ensure days expand
           defaultClassNames.day
         ),
         range_start: "rounded-full",
@@ -142,7 +186,6 @@ function Calendar({
               <ChevronLeftIcon className={cn("size-4", className)} {...props} />
             );
           }
-
           if (orientation === "right") {
             return (
               <ChevronRightIcon
@@ -151,12 +194,13 @@ function Calendar({
               />
             );
           }
-
           return (
             <ChevronDownIcon className={cn("size-4", className)} {...props} />
           );
         },
-        DayButton: CalendarDayButton,
+        DayButton: (dayButtonProps) => (
+          <CalendarDayButton {...dayButtonProps} markedDates={markedDates} />
+        ),
         WeekNumber: ({ children, ...props }) => {
           return (
             <td {...props}>
@@ -177,104 +221,146 @@ function CalendarDayButton({
   className,
   day,
   modifiers,
+  markedDates = [],
   ...props
-}: React.ComponentProps<typeof DayButton>) {
+}: React.ComponentProps<typeof DayButton> & { markedDates?: CalendarMarker[] }) {
   const defaultClassNames = getDefaultClassNames();
+  const [isOpen, setIsOpen] = React.useState(false); 
+  
+  const { theme } = useThemeContext();
+  const themeClass = theme === 'dark' ? 'authenticated dark' : 'authenticated';
 
   const ref = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
     if (modifiers.focused) ref.current?.focus();
   }, [modifiers.focused]);
 
-  const isSelected = modifiers.selected &&
-    !modifiers.range_start &&
-    !modifiers.range_end &&
-    !modifiers.range_middle;
-
+  const isSelected = modifiers.selected && !modifiers.range_start && !modifiers.range_end && !modifiers.range_middle;
   const isOutsideDay = modifiers.outside;
   const isDisabled = modifiers.disabled;
   const isInteractive = !isOutsideDay && !isDisabled;
 
-  return (
-    <Button
+  const marker = markedDates.find(m => 
+    m.date.getDate() === day.date.getDate() &&
+    m.date.getMonth() === day.date.getMonth() &&
+    m.date.getFullYear() === day.date.getFullYear()
+  );
+
+  const dots = marker?.events || [];
+  const hasEvents = dots.length > 0;
+
+  const handleMouseEnter = () => {
+    if (isInteractive) setIsOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsOpen(false);
+  };
+
+  const getDisplayColor = (baseColor: string) => {
+    if (theme === 'light') {
+      return darkenHex(baseColor, 30);
+    }
+    return baseColor;
+  };
+
+  const ButtonContent = (
+    <button
       ref={ref}
-      variant="ghost"
-      size="icon"
-      data-day={day.date.toLocaleDateString()}
-      data-selected-single={isSelected}
-      data-range-start={modifiers.range_start}
-      data-range-end={modifiers.range_end}
-      data-range-middle={modifiers.range_middle}
+      type="button"
       className={cn(
-        // Base styles - ALWAYS rounded-full
-        "flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal rounded-full",
-        "text-[var(--color-text-primary)] transition-all duration-200",
-        
-        // Default state
-        "bg-transparent",
-        
-        // HOVER: Force #2F437F background and white text
-        // Only for interactive, non-selected days
-        isInteractive && !isSelected && [
-          "hover:!bg-[#2F437F]",
-          "hover:!text-white",
-          "hover:!border-transparent"
-        ],
-        
-        // SELECTED: Force #4169E1 background and white text
-        // Only for interactive days
-        isInteractive && isSelected && [
-          "!bg-[#4169E1]",
-          "!text-white",
-          "!border-transparent"
-        ],
-        
-        // Range states
-        modifiers.range_start && [
-          "!bg-[#4169E1]",
-          "!text-white"
-        ],
-        modifiers.range_end && [
-          "!bg-[#4169E1]", 
-          "!text-white"
-        ],
-        modifiers.range_middle && [
-          "!bg-[#2F437F]",
-          "!text-white"
-        ],
-        
-        // Today indicator
-        modifiers.today && !isSelected && isInteractive && [
-          "border",
-          "border-[#4169E1]"
-        ],
-        
-        // Outside days (muted) - no hover, no selection, adjusted opacity
-        isOutsideDay && [
-          "!opacity-40",
-          "!text-[var(--color-text-primary)]",
-          "cursor-default",
-          "hover:!bg-transparent",
-          "hover:!text-[var(--color-text-primary)]"
-        ],
-        
-        // Disabled days - no hover, no selection
-        isDisabled && [
-          "!opacity-30",
-          "!text-[var(--color-text-primary)]",
-          "cursor-default",
-          "hover:!bg-transparent",
-          "hover:!text-[var(--color-text-primary)]"
-        ],
-        
+        buttonVariants({ variant: "ghost", size: "icon" }),
+        "flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal rounded-full relative items-center justify-center",
+        "text-[var(--color-text-primary)] transition-all duration-200 bg-transparent",
+        isInteractive && !isSelected && ["hover:!bg-[#2F437F] hover:!text-white hover:!border-transparent"],
+        isInteractive && isSelected && ["!bg-[#4169E1] !text-white !border-transparent"],
+        modifiers.today && !isSelected && isInteractive && ["border border-[#4169E1]"],
+        (isOutsideDay || isDisabled) && ["!opacity-40 cursor-default hover:!bg-transparent"],
         defaultClassNames.day,
         className
       )}
-      style={{ 
-        pointerEvents: isInteractive ? 'auto' : 'none'
-      }}
-      {...props}
-    />
+      style={{ pointerEvents: isInteractive ? 'auto' : 'none' }}
+      onClick={props.onClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      tabIndex={props.tabIndex}
+    >
+      <span className={cn("text-sm", dots.length > 0 ? "-mt-1" : "")}>{day.date.getDate()}</span>
+      
+      {dots.length > 0 && !isOutsideDay && (
+        <div className="flex gap-0.5 absolute bottom-1.5 justify-center flex-wrap max-w-[70%]">
+          {dots.slice(0, 3).map((evt, i) => {
+            const dotColor = evt.color || 'var(--color-primary)';
+            const finalColor = isSelected ? 'white' : getDisplayColor(dotColor);
+
+            return (
+              <div 
+                key={i} 
+                className={cn("w-1 h-1 rounded-full", isSelected ? "bg-white" : "")}
+                style={{ backgroundColor: finalColor }} 
+              />
+            );
+          })}
+          {dots.length > 3 && (
+             <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-gray-400")} />
+          )}
+        </div>
+      )}
+    </button>
+  );
+
+  if (!isInteractive) {
+    return ButtonContent;
+  }
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        {ButtonContent}
+      </PopoverTrigger>
+      <PopoverContent 
+        className={cn(
+            "w-64 p-3 bg-[var(--color-components-bg)] border-[var(--color-border)] shadow-xl z-50 pointer-events-none",
+            themeClass
+        )}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="space-y-2">
+          <h4 className="font-semibold text-sm border-b border-[var(--color-border)] pb-1 mb-2 text-[var(--color-text-primary)]">
+            {day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </h4>
+          <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto">
+            {hasEvents ? (
+              dots.map((evt, idx) => {
+                const listDotColor = getDisplayColor(evt.color || 'var(--color-primary)');
+                return (
+                  <div key={idx} className="flex items-start gap-2 text-left">
+                    <div 
+                      className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" 
+                      style={{ backgroundColor: listDotColor }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate text-[var(--color-text-primary)]">
+                        {evt.title}
+                      </p>
+                      {evt.time && (
+                        <p className="text-[10px] text-[var(--color-text-secondary)]">
+                          {evt.time}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-xs text-[var(--color-text-secondary)] text-center py-2">
+                No events scheduled for this day
+              </p>
+            )}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

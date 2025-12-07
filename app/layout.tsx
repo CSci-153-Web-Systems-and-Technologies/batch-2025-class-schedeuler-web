@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "./context/ToastContext";
 
 const InterFont = Inter({
   variable: "--font-inter",
@@ -12,7 +13,6 @@ const PoppinsFont = Poppins({
   weight: ["400", "700"],
   subsets: ["latin"],
 });
-
 
 export const metadata: Metadata = {
   title: "Class SchedEuler",
@@ -27,10 +27,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-      suppressHydrationWarning
-        className={ `${PoppinsFont.variable} ${InterFont.variable} font-sans` }
+        suppressHydrationWarning
+        className={`${PoppinsFont.variable} ${InterFont.variable} font-sans`}
       >
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );
