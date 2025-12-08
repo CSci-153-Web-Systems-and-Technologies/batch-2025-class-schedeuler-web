@@ -1,3 +1,4 @@
+// app/(authenticated)/student/classes/components/JoinClassCard.tsx
 "use client";
 
 import React, { useState } from 'react';
@@ -20,7 +21,59 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
   const supabase = createClient();
   const { showToast } = useToast();
   const { theme } = useThemeContext();
-  const { subjects: currentSchedule } = useSubjects();
+  const { subjects: currentSchedule, deleteSubject } = useSubjects();
+
+  const executeJoin = async (classId: string, className: string, eventIdToDelete: string | null = null) => {
+    setLoading(true);
+    setIsConflictModalOpen(false);
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        if (eventIdToDelete) {
+            await deleteSubject(eventIdToDelete); 
+        }
+
+        const { error: enrollError } = await supabase
+            .from('enrollments')
+            .insert([{
+            student_id: user.id,
+            class_id: classId,
+            status: 'pending'
+            }]);
+
+        if (enrollError) {
+            console.error(enrollError);
+            if (enrollError.code === '23505') { 
+                showToast('Info', 'You have already requested to join this class.', 'info');
+            } else {
+                showToast('Error', 'Failed to join class.', 'error');
+            }
+        } else {
+            showToast('Success', `Request sent to join "${className}"`, 'success');
+            setClassCode(''); 
+            if (onJoinSuccess) onJoinSuccess(); 
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Error', 'Failed to process join request.', 'error');
+    } finally {
+        setLoading(false);
+        setPendingClassData(null);
+    }
+  };
+
+  const handleReplaceAndJoin = async () => {
+    if (!pendingClassData || !pendingClassData.manualConflictId) return;
+    
+    await executeJoin(
+        pendingClassData.id, 
+        pendingClassData.name, 
+        pendingClassData.manualConflictId
+    );
+  };
+
 
   const handleJoinClick = async () => {
     if (!classCode.trim()) {
@@ -86,7 +139,12 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
       const conflicts = getConflictingEvents(tentativeEvent, currentSchedule);
 
       if (conflicts.length > 0) {
-        setPendingClassData(classData);
+        const manualConflict = conflicts.find(c => c.type === EventType.SUBJECT && !c.id.startsWith('class_'));
+        
+        setPendingClassData({
+            ...classData,
+            manualConflictId: manualConflict ? manualConflict.id : null,
+        });
         setDetectedConflicts(conflicts);
         setIsConflictModalOpen(true);
         setLoading(false); 
@@ -101,38 +159,6 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
     }
   };
 
-  const executeJoin = async (classId: string, className: string) => {
-    setLoading(true);
-    setIsConflictModalOpen(false);
-
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { error: enrollError } = await supabase
-            .from('enrollments')
-            .insert([{
-            student_id: user.id,
-            class_id: classId,
-            status: 'pending'
-            }]);
-
-        if (enrollError) {
-            console.error(enrollError);
-            showToast('Error', 'Failed to join class.', 'error');
-        } else {
-            showToast('Success', `Request sent to join "${className}"`, 'success');
-            setClassCode(''); 
-            if (onJoinSuccess) onJoinSuccess(); 
-        }
-    } catch (err) {
-        console.error(err);
-        showToast('Error', 'Failed to process join request.', 'error');
-    } finally {
-        setLoading(false);
-        setPendingClassData(null);
-    }
-  };
 
   return (
     <>
@@ -187,9 +213,11 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
       <JoinConflictModal
         isOpen={isConflictModalOpen}
         onClose={() => setIsConflictModalOpen(false)}
-        onConfirm={() => executeJoin(pendingClassData?.id, pendingClassData?.name)}
+        onConfirm={() => executeJoin(pendingClassData?.id, pendingClassData?.name)} 
+        onConfirmReplace={handleReplaceAndJoin}
         newClassName={pendingClassData?.name || 'Class'}
         conflicts={detectedConflicts}
+        isReplacingManualSubject={!!pendingClassData?.manualConflictId}
       />
     </>
   );
