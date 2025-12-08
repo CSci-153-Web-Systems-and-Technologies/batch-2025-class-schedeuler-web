@@ -31,7 +31,6 @@ interface CalendarViewProps {
   isScheduleOnly?: boolean; 
   readOnly?: boolean; 
   onSlotSelect?: (slotInfo: SlotInfo) => void;
-  // [NEW] Custom handler for selecting an event (to edit classes in instructor view)
   onEventSelect?: (event: CalendarEvent) => void; 
 }
 
@@ -42,7 +41,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   isScheduleOnly = false,
   readOnly = false,
   onSlotSelect,
-  onEventSelect // [NEW] Destructure the new prop
+  onEventSelect
 }) => {
   const { tasks: taskEvents, addTask, updateTask, deleteTask: deleteTaskContext } = useTasks();
   const { 
@@ -130,7 +129,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
 
   const handleSelectEvent = (event: CalendarEvent) => {
-    // [FIX] If onEventSelect is provided (Instructor Mode), call it and return
     if (onEventSelect) {
         onEventSelect(event);
         return;
@@ -411,7 +409,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
       )}
 
-      {/* Render generic event modal only if NOT overridden by onSlotSelect */}
       {showEventModal && !readOnly && !onSlotSelect && !onEventSelect && (
         <EventModal
           event={selectedEvent}
