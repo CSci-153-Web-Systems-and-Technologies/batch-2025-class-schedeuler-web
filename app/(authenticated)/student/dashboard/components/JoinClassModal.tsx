@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { X, Search, Loader2 } from 'lucide-react';
+import { X, Search, Loader2, ShieldAlert } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
 
@@ -22,10 +22,9 @@ export default function JoinClassModal({ isOpen, onClose }: JoinClassModalProps)
     setLoading(true);
     setFoundClass(null);
 
-    // 1. Find Class by Code
     const { data, error } = await supabase
       .from('classes')
-      .select('id, name, instructor_id, profiles(name)') // Join with profiles to get instructor name
+      .select('id, name, instructor_id, profiles(name)') 
       .eq('code', classCode.trim())
       .single();
 
@@ -45,21 +44,20 @@ export default function JoinClassModal({ isOpen, onClose }: JoinClassModalProps)
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // 2. Create Enrollment Request
     const { error } = await supabase
       .from('enrollments')
       .insert([
         {
           student_id: user.id,
           class_id: foundClass.id,
-          status: 'pending' // Default status
+          status: 'pending' 
         }
       ]);
 
     setLoading(false);
 
     if (error) {
-      if (error.code === '23505') { // Unique violation
+      if (error.code === '23505') { 
         showToast('Info', 'You have already requested to join this class.', 'info');
       } else {
         showToast('Error', 'Failed to join class.', 'error');
@@ -78,7 +76,6 @@ export default function JoinClassModal({ isOpen, onClose }: JoinClassModalProps)
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-[var(--color-components-bg)] w-full max-w-md rounded-2xl shadow-xl border border-[var(--color-border)] flex flex-col overflow-hidden">
         
-        {/* Header */}
         <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center">
           <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Join a Class</h2>
           <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
@@ -86,7 +83,6 @@ export default function JoinClassModal({ isOpen, onClose }: JoinClassModalProps)
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-6 space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-medium text-[var(--color-text-secondary)]">Class Code</label>
@@ -108,7 +104,6 @@ export default function JoinClassModal({ isOpen, onClose }: JoinClassModalProps)
             </div>
           </div>
 
-          {/* Search Result */}
           {foundClass && (
             <div className="bg-[var(--color-hover)] p-4 rounded-xl border border-[var(--color-border)]">
               <h3 className="font-bold text-lg text-[var(--color-text-primary)]">{foundClass.name}</h3>
@@ -116,6 +111,14 @@ export default function JoinClassModal({ isOpen, onClose }: JoinClassModalProps)
                 Instructor: {Array.isArray(foundClass.profiles) ? foundClass.profiles[0]?.name : foundClass.profiles?.name || 'Unknown'}
               </p>
               
+              {/* [NEW] Privacy Notice in Modal */}
+              <div className="mt-4 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg text-xs text-blue-800 dark:text-blue-300">
+                <ShieldAlert size={14} className="mt-0.5 flex-shrink-0" />
+                <p>
+                  <span className="font-bold">Privacy Note:</span> Joining this class allows the instructor to view your schedule for conflict detection.
+                </p>
+              </div>
+
               <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
                 <button
                   onClick={handleJoin}

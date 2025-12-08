@@ -3,13 +3,15 @@
 import React, { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert } from 'lucide-react';
+import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
 
 const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess }) => {
   const [classCode, setClassCode] = useState('');
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
   const { showToast } = useToast();
+  const { theme } = useThemeContext();
 
   const handleJoin = async () => {
     if (!classCode.trim()) {
@@ -20,7 +22,6 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
     setLoading(true);
 
     try {
-      // 1. Find the class ID from the code
       const { data: classData, error: classError } = await supabase
         .from('classes')
         .select('id, name')
@@ -33,11 +34,9 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
         return;
       }
 
-      // 2. Get User
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 3. Insert Enrollment
       const { error: enrollError } = await supabase
         .from('enrollments')
         .insert([{
@@ -47,7 +46,7 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
         }]);
 
       if (enrollError) {
-        if (enrollError.code === '23505') { // Duplicate key error
+        if (enrollError.code === '23505') { 
           showToast('Info', `You have already requested to join "${classData.name}"`, 'info');
         } else {
           console.error(enrollError);
@@ -55,8 +54,8 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
         }
       } else {
         showToast('Success', `Request sent to join "${classData.name}"`, 'success');
-        setClassCode(''); // Clear input
-        if (onJoinSuccess) onJoinSuccess(); // Refresh list
+        setClassCode(''); 
+        if (onJoinSuccess) onJoinSuccess(); 
       }
 
     } catch (err) {
@@ -100,6 +99,20 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
         >
           {loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'JOIN'}
         </button>
+      </div>
+
+      {/* [NEW] Privacy Notice */}
+      <div 
+        className="mt-4 flex items-start gap-2 p-3 rounded-lg text-xs md:text-sm"
+        style={{
+           backgroundColor: theme === 'dark' ? 'rgba(30, 58, 138, 0.1)' : '#EFF6FF',
+           color: theme === 'dark' ? '#93C5FD' : '#1E40AF'
+        }}
+      >
+        <ShieldAlert size={16} className="mt-0.5 flex-shrink-0" />
+        <p>
+          <span className="font-bold">Privacy Note:</span> By joining a class, you allow the instructor to view your schedule for conflict detection. This ensures exams and classes don't overlap with your other commitments.
+        </p>
       </div>
     </div>
   );

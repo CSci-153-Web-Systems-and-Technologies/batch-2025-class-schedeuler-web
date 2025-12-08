@@ -1,23 +1,26 @@
-// app/(authenticated)/student/dashboard/page.tsx
 "use client";
 
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation"; 
 import { createClient } from "@/utils/supabase/client"; 
+import { useToast } from "@/app/context/ToastContext"; 
+import moment from 'moment';
+
+// Components
 import AppBreadcrumb from "@/app/components/ui/AppBreadCrumb";
 import Greeting from "@/app/(authenticated)/components/Greeting";
 import CalendarDisplay from "@/app/(authenticated)/components/CalendarDisplay";
-import SubjectsList from "./components/SubjectsList";
-import PomodoroTimer from "./components/PomodoroTimer";
 import StudentOverview from "./components/StudentOverview";
 import TasksDeadline from "./components/TasksDeadline";
 import JoinClassButton from "./components/JoinClassButton";
+import PomodoroTimer from "./components/PomodoroTimer";
+import SubjectsList from "./components/SubjectsList";
+
+// Types & Context
 import { ClassCardProps } from "../../components/ClassCard";
 import { EventType } from '@/types/calendar';
 import { useSubjects } from "../subjects/SubjectContext";
 import { generateRecurringEvents } from "@/utils/calendarUtils";
-import moment from 'moment';
-import { useToast } from "@/app/context/ToastContext"; 
 
 export default function StudentDashboard() {
   const [userName, setUserName] = useState("Student");
@@ -29,21 +32,19 @@ export default function StudentDashboard() {
   const { showToast } = useToast();
   const toastShownRef = useRef(false);
 
+  // --- Login/Signup Toasts ---
   useEffect(() => {
     const toastType = searchParams.get('toast');
-    
     if (toastType && !toastShownRef.current) {
-      if (toastType === 'login') {
-        showToast("Welcome Back!", "Logged in successfully.", "success");
-      } else if (toastType === 'signup') {
-        showToast("Welcome!", "Account created successfully.", "success");
-      }
+      if (toastType === 'login') showToast("Welcome Back!", "Logged in successfully.", "success");
+      else if (toastType === 'signup') showToast("Welcome!", "Account created successfully.", "success");
       
       toastShownRef.current = true;
       router.replace('/student/dashboard'); 
     }
   }, [searchParams, showToast, router]);
 
+  // --- Fetch User ---
   useEffect(() => {
     async function getUser() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -62,6 +63,7 @@ export default function StudentDashboard() {
     getUser();
   }, [supabase]);
 
+  // --- Calculate Today's Schedule ---
   const todaySchedule = useMemo(() => {
      const eventsToday = generateRecurringEvents(allSubjects, new Date(), 'day');
      const subjectInstances = eventsToday.filter(e => e.type === EventType.SUBJECT);
@@ -75,6 +77,7 @@ export default function StudentDashboard() {
      }));
   }, [allSubjects]);
 
+  // --- Subject List Data ---
   const subjectsListData = useMemo(() => {
       const uniqueSubjects = allSubjects.filter(subj => subj.type === EventType.SUBJECT);
       return uniqueSubjects.map(subj => ({
@@ -85,42 +88,52 @@ export default function StudentDashboard() {
 
   return (
     <div
-      className="min-h-screen py-6 px-4 sm:px-6 lg:px-12"
+      className="min-h-screen py-6 px-4 sm:px-6 lg:px-8"
       style={{ backgroundColor: "var(--color-main-bg)" }}
     >
       <AppBreadcrumb />
-      <div className="flex justify-between items-center mb-6">
+
+      {/* Header: Greeting & Action */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <Greeting userName={userName} />
-        <JoinClassButton />
+        <JoinClassButton className="shadow-lg hover:scale-105 transition-transform" />
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between lg:gap-10 gap-5 mb-6 nd:w-2/3 ">
-        <StudentOverview subjects={todaySchedule} /> 
+      {/* TOP SECTION: Overview (Left) + Calendar & Pomodoro (Right) */}
+      <div className="flex flex-col xl:flex-row gap-6 mb-6">
         
-        <div className="flex flex-col justify-center align-center min-w-xs gap-3">
-          <CalendarDisplay />
-          <PomodoroTimer />
+        {/* Left Column: Today's Classes (Takes up more space) */}
+        <div className="w-full xl:w-2/3">
+          <StudentOverview subjects={todaySchedule} />
+        </div>
+
+        {/* Right Column: Calendar & Pomodoro Stack */}
+        <div className="w-full xl:w-1/3 flex flex-col gap-6">
+          {/* Calendar Widget */}
+          <div 
+            className="p-4 rounded-2xl border border-[var(--color-border)] shadow-sm bg-[var(--color-components-bg)]"
+          >
+            <CalendarDisplay />
+          </div>
+
+          {/* Pomodoro Widget */}
+          <div>
+             <PomodoroTimer />
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row justify-between gap-6">
+      {/* BOTTOM SECTION: Tasks & Subjects (Side by Side) */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        
+        {/* Tasks Deadline Widget */}
         <div className="flex-1 min-w-0">
           <TasksDeadline /> 
         </div>
 
+        {/* Subjects List Widget */}
         <div className="flex-1 min-w-0">
-          <div
-            className="px-8 py-4 rounded-xl h-full"
-            style={{ backgroundColor: "var(--color-components-bg)" }}
-            >
-            <h1
-              className="text-2xl font-bold border-b-2 mb-2.5"
-              style={{ color: "var(--color-text-primary)" }}
-            >
-              Subjects
-            </h1>
-            <SubjectsList subjects={subjectsListData} />
-          </div>
+          <SubjectsList subjects={subjectsListData} />
         </div>  
       </div>
     </div>
