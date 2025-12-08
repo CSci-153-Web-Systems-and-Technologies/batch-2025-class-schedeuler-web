@@ -32,4 +32,5 @@ export interface CalendarEvent {
   subjectCode?: string;
   instructor?: string;
   location?: string;
+  classType?: 'Lecture' | 'Lab';
 }
