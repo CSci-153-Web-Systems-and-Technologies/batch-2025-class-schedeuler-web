@@ -6,6 +6,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/DatePickerStyles.css'; 
 import { useToast } from '@/app/context/ToastContext'; 
+import { Lock } from 'lucide-react';
 
 interface EventModalProps {
   event?: CalendarEvent | null;
@@ -17,18 +18,8 @@ interface EventModalProps {
 }
 
 const COLOR_OPTIONS = [
-  '#D9F99D', // Lime
-  '#C7D2FE', // Periwinkle 
-  '#FBCFE8', // Rose Pink 
-  '#BAE6FD', // Sky Blue 
-  '#FDE68A', // Soft Yellow
-  '#A7F3D0', // Mint Green
-  '#DDD6FE', // Lavender
-  '#F5D0FE', // Fuchsia
-  '#FECACA', // Soft Red
-  '#FED7AA', // Orange/Peach
-  '#E2E8F0', // Slate/Grey
-  '#99F6E4', // Teal
+  '#D9F99D', '#C7D2FE', '#FBCFE8', '#BAE6FD', '#FDE68A', '#A7F3D0', 
+  '#DDD6FE', '#F5D0FE', '#FECACA', '#FED7AA', '#E2E8F0', '#99F6E4'
 ];
 
 const EventModal: React.FC<EventModalProps> = ({
@@ -41,6 +32,9 @@ const EventModal: React.FC<EventModalProps> = ({
 }) => {
   const { showToast } = useToast(); 
 
+  // [NEW] Determine if this is an official class (Read Only)
+  const isOfficialClass = event?.id?.startsWith('class_');
+  
   const defaultEvent = isScheduleOnly 
     ? {
         type: EventType.SUBJECT,
@@ -86,6 +80,7 @@ const EventModal: React.FC<EventModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isOfficialClass) return; // Prevent submission
     
     if (!formData.title?.trim()) {
         showToast("Missing Field", "Please enter a title.", "error");
@@ -156,10 +151,6 @@ const EventModal: React.FC<EventModalProps> = ({
     onSave(finalEvent);
   };
 
-  const handleDelete = () => {
-    onDelete();
-  };
-  
   const isSubject = formData.type === EventType.SUBJECT;
   const isTaskOrExam = formData.type === EventType.TASK || formData.type === EventType.EXAM;
   const isTask = formData.type === EventType.TASK;
@@ -171,6 +162,7 @@ const EventModal: React.FC<EventModalProps> = ({
   ];
 
   const handleRepeatDayToggle = (dayValue: number) => {
+    if (isOfficialClass) return;
     setFormData(prev => {
       const days = prev.repeatDays || [];
       if (days.includes(dayValue)) {
@@ -184,16 +176,24 @@ const EventModal: React.FC<EventModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-[var(--color-components-bg)] rounded-lg p-6 w-full max-w-md border border-[var(--color-border)] flex flex-col max-h-[90vh]">
-        <h2 className="text-xl font-bold mb-4 text-[var(--color-text-primary)] flex-shrink-0">
-          {event 
-            ? 'Edit Event' 
-            : (isScheduleOnly ? 'Create New Subject' : 'Create New Event')
-          }
-        </h2>
+        <div className="flex justify-between items-center mb-4 flex-shrink-0">
+            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
+            {isOfficialClass 
+                ? 'Class Details' 
+                : (event ? 'Edit Event' : (isScheduleOnly ? 'Create New Subject' : 'Create New Event'))
+            }
+            </h2>
+            {isOfficialClass && (
+                <div className="flex items-center gap-1 text-amber-600 bg-amber-100 px-2 py-1 rounded text-xs font-medium">
+                    <Lock size={12} />
+                    <span>Read Only</span>
+                </div>
+            )}
+        </div>
 
         <div className="overflow-y-auto flex-grow px-2"> 
           <form onSubmit={handleSubmit}>
-            {!isScheduleOnly && (
+            {!isScheduleOnly && !isOfficialClass && (
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">Event Type</label>
                 <div className="flex gap-2">
@@ -236,39 +236,42 @@ const EventModal: React.FC<EventModalProps> = ({
 
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                Title <span className="text-red-500">*</span>
+                Title {isOfficialClass ? '' : <span className="text-red-500">*</span>}
               </label>
               <input
                 type="text"
-                className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                disabled={isOfficialClass}
+                className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:opacity-70 disabled:cursor-not-allowed"
                 value={formData.title || ''}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                 required
               />
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Color</label>
-              <div className="flex flex-wrap gap-2">
-                {COLOR_OPTIONS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setFormData({...formData, color})}
-                    className={`size-8 rounded-full border-2 transition-transform hover:scale-110`}
-                    style={{
-                      backgroundColor: color,
-                      borderColor: formData.color === color ? 'var(--color-text-primary)' : 'transparent',
-                      boxShadow: formData.color === color ? `0 0 0 2px ${color}` : 'none',
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
+            {!isOfficialClass && (
+                <div className="mb-4">
+                <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Color</label>
+                <div className="flex flex-wrap gap-2">
+                    {COLOR_OPTIONS.map((color) => (
+                    <button
+                        key={color}
+                        type="button"
+                        onClick={() => setFormData({...formData, color})}
+                        className={`size-8 rounded-full border-2 transition-transform hover:scale-110`}
+                        style={{
+                        backgroundColor: color,
+                        borderColor: formData.color === color ? 'var(--color-text-primary)' : 'transparent',
+                        boxShadow: formData.color === color ? `0 0 0 2px ${color}` : 'none',
+                        }}
+                    />
+                    ))}
+                </div>
+                </div>
+            )}
             
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                Start Time <span className="text-red-500">*</span>
+                Start Time {isOfficialClass ? '' : <span className="text-red-500">*</span>}
               </label>
               <div className="flex gap-2">
                 <DatePicker
@@ -277,14 +280,15 @@ const EventModal: React.FC<EventModalProps> = ({
                   showTimeSelect
                   timeIntervals={15}
                   dateFormat="MMMM d, yyyy h:mm aa"
-                  className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                  disabled={isOfficialClass}
+                  className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:opacity-70 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
 
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                End Time <span className="text-red-500">*</span>
+                End Time {isOfficialClass ? '' : <span className="text-red-500">*</span>}
               </label>
               <div className="flex gap-2">
                   <DatePicker
@@ -293,7 +297,8 @@ const EventModal: React.FC<EventModalProps> = ({
                       showTimeSelect
                       timeIntervals={15}
                       dateFormat="MMMM d, yyyy h:mm aa"
-                      className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                      disabled={isOfficialClass}
+                      className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:opacity-70 disabled:cursor-not-allowed"
                     />
               </div>
             </div>
@@ -305,7 +310,8 @@ const EventModal: React.FC<EventModalProps> = ({
                         <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Subject Code</label>
                         <input
                             type="text"
-                            className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                            disabled={isOfficialClass}
+                            className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:opacity-70 disabled:cursor-not-allowed"
                             value={formData.subjectCode || ''}
                             onChange={(e) => setFormData({...formData, subjectCode: e.target.value})}
                             placeholder="e.g. CS401"
@@ -315,7 +321,8 @@ const EventModal: React.FC<EventModalProps> = ({
                         <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Location</label>
                         <input
                             type="text"
-                            className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                            disabled={isOfficialClass}
+                            className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:opacity-70 disabled:cursor-not-allowed"
                             value={formData.location || ''}
                             onChange={(e) => setFormData({...formData, location: e.target.value})}
                         />
@@ -325,7 +332,8 @@ const EventModal: React.FC<EventModalProps> = ({
                     <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Instructor</label>
                     <input
                         type="text"
-                        className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                        disabled={isOfficialClass}
+                        className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:opacity-70 disabled:cursor-not-allowed"
                         value={formData.instructor || ''}
                         onChange={(e) => setFormData({...formData, instructor: e.target.value})}
                     />
@@ -348,24 +356,26 @@ const EventModal: React.FC<EventModalProps> = ({
 
             {isSubject && (
               <>
-                <div className="mb-4">
-                    <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Repeat</label>
-                    <select
-                        className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                        value={formData.repeatPattern || RepeatPattern.NONE}
-                        onChange={(e) => setFormData({...formData, repeatPattern: e.target.value as RepeatPattern})}
-                    >
-                        <option value={RepeatPattern.NONE}>Does not repeat</option>
-                        <option value={RepeatPattern.DAILY}>Daily</option>
-                        <option value={RepeatPattern.WEEKLY}>Weekly</option>
-                        <option value={RepeatPattern.MONTHLY}>Monthly</option>
-                    </select>
-                </div>
+                {!isOfficialClass && (
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Repeat</label>
+                        <select
+                            className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                            value={formData.repeatPattern || RepeatPattern.NONE}
+                            onChange={(e) => setFormData({...formData, repeatPattern: e.target.value as RepeatPattern})}
+                        >
+                            <option value={RepeatPattern.NONE}>Does not repeat</option>
+                            <option value={RepeatPattern.DAILY}>Daily</option>
+                            <option value={RepeatPattern.WEEKLY}>Weekly</option>
+                            <option value={RepeatPattern.MONTHLY}>Monthly</option>
+                        </select>
+                    </div>
+                )}
 
-                {formData.repeatPattern === RepeatPattern.WEEKLY && (
+                {(formData.repeatPattern === RepeatPattern.WEEKLY || isOfficialClass) && (
                     <div className="mb-4">
                         <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
-                            Repeat Days <span className="text-red-500">*</span>
+                            Repeat Days
                         </label>
                         <div className="flex flex-wrap gap-2">
                             {dayMap.map((day) => (
@@ -373,11 +383,12 @@ const EventModal: React.FC<EventModalProps> = ({
                                     key={day.value}
                                     type="button"
                                     onClick={() => handleRepeatDayToggle(day.value)}
+                                    disabled={isOfficialClass}
                                     className={`size-8 rounded-full font-medium transition-colors border-2 ${
                                         (formData.repeatDays || []).includes(day.value)
                                             ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
                                             : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] border-[var(--color-border)] hover:bg-[var(--color-border)]'
-                                    }`}
+                                    } ${isOfficialClass ? 'opacity-80 cursor-not-allowed' : ''}`}
                                 >
                                     {day.label.charAt(0)}
                                 </button>
@@ -386,7 +397,7 @@ const EventModal: React.FC<EventModalProps> = ({
                     </div>
                 )}
 
-                {formData.repeatPattern !== RepeatPattern.NONE && (
+                {formData.repeatPattern !== RepeatPattern.NONE && !isOfficialClass && (
                     <div className="mb-4">
                         <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Repeat Until (Optional)</label>
                         <DatePicker
@@ -433,10 +444,10 @@ const EventModal: React.FC<EventModalProps> = ({
         </div>
 
         <div className="flex justify-end gap-2 mt-6 flex-shrink-0">
-          {event && (
+          {!isOfficialClass && event && (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={onDelete}
               className="px-4 py-2 text-red-600 hover:text-red-800 transition-colors"
             >
               Delete
@@ -447,15 +458,18 @@ const EventModal: React.FC<EventModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 border border-[var(--color-border)] rounded hover:bg-[var(--color-hover)] transition-colors text-[var(--color-text-primary)]"
           >
-            Cancel
+            {isOfficialClass ? 'Close' : 'Cancel'}
           </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="px-4 py-2 bg-[var(--color-primary)] text-white rounded hover:opacity-90 transition-colors"
-          >
-            Save
-          </button>
+          
+          {!isOfficialClass && (
+            <button
+                type="button"
+                onClick={handleSubmit}
+                className="px-4 py-2 bg-[var(--color-primary)] text-white rounded hover:opacity-90 transition-colors"
+            >
+                Save
+            </button>
+          )}
         </div>
       </div>
     </div>
