@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { CalendarEvent, EventType, RepeatPattern } from '@/types/calendar';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
@@ -10,6 +10,7 @@ interface SubjectContextType {
   addSubject: (newSubject: CalendarEvent) => void;
   updateSubject: (updatedSubject: CalendarEvent) => void;
   deleteSubject: (id: string) => void;
+  refreshSubjects: () => Promise<void>;
   loading: boolean;
 }
 
@@ -20,24 +21,81 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
   const { showToast } = useToast();
+  
+  // Ref to hold the current subjects list for use inside Realtime callbacks
+  // (This prevents stale closures without needing to re-subscribe constantly)
+  const subjectsRef = useRef<CalendarEvent[]>([]);
 
-  // --- FETCH SUBJECTS & EXAMS ---
+  // Keep ref synced with state
   useEffect(() => {
-    const fetchSubjects = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    subjectsRef.current = subjects;
+  }, [subjects]);
 
-      const { data, error } = await supabase
+  // --- HELPER: Map DB "Class" Row to "Calendar Event" ---
+  const mapClassToEvent = useCallback((cls: any): CalendarEvent => {
+    const now = new Date();
+    now.setSeconds(0);
+    now.setMilliseconds(0);
+    
+    // Handle potentially missing fields gracefully
+    const startTimeStr = cls.start_time || "08:00:00";
+    const endTimeStr = cls.end_time || "09:00:00";
+
+    const [startH, startM] = startTimeStr.split(':').map(Number);
+    const [endH, endM] = endTimeStr.split(':').map(Number);
+
+    const startDate = new Date(now);
+    startDate.setHours(startH, startM, 0, 0);
+
+    const endDate = new Date(now);
+    endDate.setHours(endH, endM, 0, 0);
+
+    return {
+      id: `class_${cls.id}`,
+      title: cls.name,
+      type: EventType.SUBJECT,
+      start: startDate,
+      end: endDate,
+      color: cls.color || '#4169e1',
+      description: cls.description,
+      subjectCode: cls.subject_code || cls.code,
+      location: cls.location,
+      instructor: 'Official Class', 
+      repeatPattern: RepeatPattern.WEEKLY,
+      repeatDays: cls.repeat_days || [],
+      classType: cls.class_type,
+    };
+  }, []);
+
+  // --- MAIN FETCH ---
+  const fetchSubjects = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+          if (!silent) setLoading(false);
+          return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('account_type')
+        .eq('id', user.id)
+        .single();
+      
+      const isInstructor = profile?.account_type === 'instructor';
+      let allEvents: CalendarEvent[] = [];
+
+      // 1. Fetch Personal Events
+      const { data: personalEvents } = await supabase
         .from('events')
         .select('*')
         .eq('user_id', user.id)
-        .in('type', ['subject', 'exam']);
+        .in('type', ['subject', 'exam']); 
 
-      if (error) {
-        console.error('Error fetching subjects:', error);
-      } else if (data) {
-        const mappedSubjects: CalendarEvent[] = data.map((item: any) => ({
+      if (personalEvents) {
+        const mappedPersonal = personalEvents.map((item: any) => ({
           id: item.id,
           title: item.title,
           type: item.type as EventType,
@@ -46,27 +104,125 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
           color: item.color,
           description: item.description,
           subjectCode: item.subject_code,
-          instructor: item.instructor,
           location: item.location,
           repeatPattern: (item.repeat_pattern as RepeatPattern) || RepeatPattern.NONE,
           repeatUntil: item.repeat_until ? new Date(item.repeat_until) : undefined,
           repeatDays: item.repeat_days || [],
           excludeDates: (item.exclude_dates || []).map((d: string) => new Date(d)),
         }));
-        setSubjects(mappedSubjects);
+        allEvents = [...allEvents, ...mappedPersonal];
       }
-      setLoading(false);
+
+      // 2. Fetch Classes (Instructor Owns OR Student Enrolled)
+      if (isInstructor) {
+        const { data: myClasses } = await supabase
+          .from('classes')
+          .select('*')
+          .eq('instructor_id', user.id);
+        
+        if (myClasses) {
+          const mappedClasses = myClasses.map(mapClassToEvent);
+          allEvents = [...allEvents, ...mappedClasses];
+        }
+      } else {
+        const { data: enrollments } = await supabase
+          .from('enrollments')
+          .select(`
+            status,
+            classes (
+              id, name, code, subject_code, 
+              description, color, location,
+              start_time, end_time, repeat_days, class_type
+            )
+          `)
+          .eq('student_id', user.id)
+          .eq('status', 'approved');
+
+        if (enrollments) {
+          const mappedClasses = enrollments
+            .map((e: any) => e.classes)
+            .filter((c: any) => c) 
+            .map(mapClassToEvent);
+          
+          allEvents = [...allEvents, ...mappedClasses];
+        }
+      }
+
+      setSubjects(allEvents);
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [supabase, mapClassToEvent]);
+
+  // Initial Load
+  useEffect(() => {
+    fetchSubjects();
+  }, [fetchSubjects]);
+
+  // --- REAL-TIME SUBSCRIPTION ---
+  useEffect(() => {
+    let channel: any;
+
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      channel = supabase
+        .channel('universal_subject_updates')
+        
+        // 1. Personal Events
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'events', filter: `user_id=eq.${user.id}` },
+          () => fetchSubjects(true)
+        )
+        
+        // 2. Enrollments (New class added / Request accepted)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'enrollments' },
+          () => fetchSubjects(true)
+        )
+        
+        // 3. Class Updates (Instructor edits details)
+        // We listen to ALL class updates. We filter client-side to see if it matters to us.
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'classes' },
+          (payload: any) => {
+             const updatedClassId = `class_${payload.new.id}`;
+             
+             // Check if this class is in our current list (via ref)
+             const isRelevant = subjectsRef.current.some(s => s.id === updatedClassId);
+
+             if (isRelevant) {
+                 // OPTIMISTIC UPDATE: Update state immediately
+                 const newEvent = mapClassToEvent(payload.new);
+                 setSubjects(prev => prev.map(s => s.id === updatedClassId ? newEvent : s));
+                 
+                 // Fetch in background to be safe
+                 fetchSubjects(true); 
+             }
+          }
+        )
+        .subscribe();
     };
 
-    fetchSubjects();
-  }, [supabase]);
+    setupRealtime();
 
-  // --- ADD SUBJECT ---
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [supabase, fetchSubjects, mapClassToEvent]); // Dependencies are stable
+
+  // --- ACTIONS ---
+
   const addSubject = useCallback(async (newSubject: CalendarEvent) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Optimistic Update
     const tempId = Date.now().toString();
     setSubjects(prev => [...prev, { ...newSubject, id: tempId }]);
 
@@ -79,7 +235,6 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
       color: newSubject.color,
       description: newSubject.description,
       subject_code: newSubject.subjectCode,
-      instructor: newSubject.instructor,
       location: newSubject.location,
       repeat_pattern: newSubject.repeatPattern || 'none',
       repeat_until: newSubject.repeatUntil ? newSubject.repeatUntil.toISOString() : null,
@@ -90,62 +245,60 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.from('events').insert([dbPayload]).select().single();
 
     if (error) {
-      console.error('Error adding subject:', error);
       setSubjects(prev => prev.filter(s => s.id !== tempId));
-      showToast("Error", "Failed to add subject.", "error");
+      showToast("Error", "Failed to add event.", "error");
     } else {
       setSubjects(prev => prev.map(s => s.id === tempId ? { ...newSubject, id: data.id } : s));
-      showToast("Success", "Subject added successfully.", "success");
+      showToast("Success", "Event added.", "success");
     }
   }, [supabase, showToast]);
 
-  // --- UPDATE SUBJECT ---
   const updateSubject = useCallback(async (updatedSubject: CalendarEvent) => {
+    if (updatedSubject.id.startsWith('class_')) {
+      showToast("Restricted", "Update official classes in 'My Classes'.", "warning");
+      return;
+    }
     setSubjects(prev => prev.map(s => s.id === updatedSubject.id ? updatedSubject : s));
-
+    
     const dbPayload = {
-      title: updatedSubject.title,
-      start_time: updatedSubject.start.toISOString(),
-      end_time: updatedSubject.end.toISOString(),
-      color: updatedSubject.color,
-      description: updatedSubject.description,
-      subject_code: updatedSubject.subjectCode,
-      instructor: updatedSubject.instructor,
-      location: updatedSubject.location,
-      repeat_pattern: updatedSubject.repeatPattern,
-      repeat_until: updatedSubject.repeatUntil ? updatedSubject.repeatUntil.toISOString() : null,
-      repeat_days: updatedSubject.repeatDays,
-      exclude_dates: updatedSubject.excludeDates ? updatedSubject.excludeDates.map(d => d.toISOString()) : [],
+        title: updatedSubject.title,
+        start_time: updatedSubject.start.toISOString(),
+        end_time: updatedSubject.end.toISOString(),
+        color: updatedSubject.color,
+        description: updatedSubject.description,
+        subject_code: updatedSubject.subjectCode,
+        location: updatedSubject.location,
+        repeat_days: updatedSubject.repeatDays,
     };
 
     const { error } = await supabase.from('events').update(dbPayload).eq('id', updatedSubject.id);
-
-    if (error) {
-      showToast("Error", "Failed to save changes.", "error");
-    } else {
-      showToast("Success", "Subject updated successfully.", "success");
-    }
+    if (error) showToast("Error", "Failed to save changes.", "error");
+    else showToast("Success", "Event updated.", "success");
   }, [supabase, showToast]);
 
-  // --- DELETE SUBJECT ---
   const deleteSubject = useCallback(async (id: string) => {
-    setSubjects(prev => prev.filter(s => s.id !== id));
-    
-    const { error } = await supabase.from('events').delete().eq('id', id);
-    if (error) {
-      showToast("Error", "Failed to delete subject.", "error");
-    } else {
-      showToast("Deleted", "Subject deleted successfully.", "success");
+    if (id.startsWith('class_')) {
+        showToast("Restricted", "Cannot delete official classes here.", "warning");
+        return;
     }
+    setSubjects(prev => prev.filter(s => s.id !== id));
+    const { error } = await supabase.from('events').delete().eq('id', id);
+    if (error) showToast("Error", "Failed to delete.", "error");
+    else showToast("Deleted", "Event removed.", "success");
   }, [supabase, showToast]);
+
+  const refreshSubjects = async () => {
+      await fetchSubjects(true);
+  };
 
   const contextValue = useMemo(() => ({
     subjects,
     addSubject,
     updateSubject,
     deleteSubject,
+    refreshSubjects,
     loading
-  }), [subjects, addSubject, updateSubject, deleteSubject, loading]);
+  }), [subjects, addSubject, updateSubject, deleteSubject, fetchSubjects, loading]);
 
   return (
     <SubjectContext.Provider value={contextValue}>
