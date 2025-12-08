@@ -59,7 +59,6 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
   const supabase = createClient();
   const { showToast } = useToast();
   
-  // [NEW] Get existing subjects (classes) to check against
   const { subjects } = useSubjects();
 
   useEffect(() => {
@@ -115,17 +114,13 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
 
     setLoading(true);
 
-    // [NEW] Conflict Detection Logic
-    // We construct a temporary "Event" object that mimics how classes are stored in the calendar
     const now = new Date();
-    // Zero out seconds/ms for accurate comparisons
     now.setSeconds(0);
     now.setMilliseconds(0);
 
     const [startH, startM] = formData.startTime.split(':').map(Number);
     const [endH, endM] = formData.endTime.split(':').map(Number);
 
-    // Ensure end time is after start time
     if (startH > endH || (startH === endH && startM >= endM)) {
         showToast('Error', 'End time must be after start time.', 'error');
         setLoading(false);
@@ -139,7 +134,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
     endDate.setHours(endH, endM, 0, 0);
 
     const tempEvent: CalendarEvent = {
-        id: 'temp_creation_check', // Temporary ID
+        id: 'temp_creation_check',
         title: formData.name,
         type: EventType.SUBJECT,
         start: startDate,
@@ -148,7 +143,6 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
         repeatDays: formData.repeatDays
     };
 
-    // Check against existing subjects
     if (checkForConflicts(tempEvent, subjects)) {
         showToast('Conflict Detected', 'This schedule overlaps with an existing class.', 'error');
         setLoading(false);

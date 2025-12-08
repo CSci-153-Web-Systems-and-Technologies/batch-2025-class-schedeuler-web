@@ -22,22 +22,17 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   const { showToast } = useToast();
   
-  // Ref to hold the current subjects list for use inside Realtime callbacks
-  // (This prevents stale closures without needing to re-subscribe constantly)
   const subjectsRef = useRef<CalendarEvent[]>([]);
 
-  // Keep ref synced with state
   useEffect(() => {
     subjectsRef.current = subjects;
   }, [subjects]);
 
-  // --- HELPER: Map DB "Class" Row to "Calendar Event" ---
   const mapClassToEvent = useCallback((cls: any): CalendarEvent => {
     const now = new Date();
     now.setSeconds(0);
     now.setMilliseconds(0);
     
-    // Handle potentially missing fields gracefully
     const startTimeStr = cls.start_time || "08:00:00";
     const endTimeStr = cls.end_time || "09:00:00";
 
@@ -67,7 +62,6 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // --- MAIN FETCH ---
   const fetchSubjects = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     
@@ -87,7 +81,6 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
       const isInstructor = profile?.account_type === 'instructor';
       let allEvents: CalendarEvent[] = [];
 
-      // 1. Fetch Personal Events
       const { data: personalEvents } = await supabase
         .from('events')
         .select('*')
@@ -113,7 +106,6 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
         allEvents = [...allEvents, ...mappedPersonal];
       }
 
-      // 2. Fetch Classes (Instructor Owns OR Student Enrolled)
       if (isInstructor) {
         const { data: myClasses } = await supabase
           .from('classes')
@@ -156,12 +148,10 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase, mapClassToEvent]);
 
-  // Initial Load
   useEffect(() => {
     fetchSubjects();
   }, [fetchSubjects]);
 
-  // --- REAL-TIME SUBSCRIPTION ---
   useEffect(() => {
     let channel: any;
 
@@ -172,37 +162,30 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
       channel = supabase
         .channel('universal_subject_updates')
         
-        // 1. Personal Events
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'events', filter: `user_id=eq.${user.id}` },
           () => fetchSubjects(true)
         )
         
-        // 2. Enrollments (New class added / Request accepted)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'enrollments' },
           () => fetchSubjects(true)
         )
         
-        // 3. Class Updates (Instructor edits details)
-        // We listen to ALL class updates. We filter client-side to see if it matters to us.
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'classes' },
           (payload: any) => {
              const updatedClassId = `class_${payload.new.id}`;
              
-             // Check if this class is in our current list (via ref)
              const isRelevant = subjectsRef.current.some(s => s.id === updatedClassId);
 
              if (isRelevant) {
-                 // OPTIMISTIC UPDATE: Update state immediately
                  const newEvent = mapClassToEvent(payload.new);
                  setSubjects(prev => prev.map(s => s.id === updatedClassId ? newEvent : s));
                  
-                 // Fetch in background to be safe
                  fetchSubjects(true); 
              }
           }
@@ -215,9 +198,8 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [supabase, fetchSubjects, mapClassToEvent]); // Dependencies are stable
+  }, [supabase, fetchSubjects, mapClassToEvent]);
 
-  // --- ACTIONS ---
 
   const addSubject = useCallback(async (newSubject: CalendarEvent) => {
     const { data: { user } } = await supabase.auth.getUser();

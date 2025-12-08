@@ -75,14 +75,12 @@ export default function SchedulePage() {
     };
 
     return (
-        // [FIX] Responsive padding
         <div 
             className="min-h-screen py-6 px-4 sm:px-6 lg:px-8 relative overflow-x-hidden" 
             style={{ backgroundColor: "var(--color-main-bg)" }}
         >
             <AppBreadcrumb />
             
-            {/* [FIX] Stack flex-col on mobile, flex-row on large screens */}
             <div className="flex flex-col lg:flex-row gap-6">
                 <div className="w-full lg:w-3/4 min-w-0"> 
                     <Suspense fallback={
