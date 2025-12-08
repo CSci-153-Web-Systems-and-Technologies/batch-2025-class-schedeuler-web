@@ -1,6 +1,6 @@
 // components/Calendar/CalendarView.tsx
 import React, { useState, useMemo, useEffect } from 'react';
-import { Calendar as BigCalendar, momentLocalizer, View, SlotInfo, EventProps, CalendarProps } from 'react-big-calendar';
+import { Calendar as BigCalendar, momentLocalizer, View, SlotInfo, EventProps } from 'react-big-calendar';
 import moment from 'moment';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -29,11 +29,21 @@ const DnDCalendar = withDragAndDrop(BigCalendar as any) as React.ComponentType<a
 interface CalendarViewProps {
   initialDate?: Date;
   isScheduleOnly?: boolean; 
+  readOnly?: boolean; 
+  onSlotSelect?: (slotInfo: SlotInfo) => void;
+  // [NEW] Custom handler for selecting an event (to edit classes in instructor view)
+  onEventSelect?: (event: CalendarEvent) => void; 
 }
 
 const FIVE_AM = moment().hours(5).minutes(0).toDate();
 
-const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), isScheduleOnly = false }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ 
+  initialDate = new Date(), 
+  isScheduleOnly = false,
+  readOnly = false,
+  onSlotSelect,
+  onEventSelect // [NEW] Destructure the new prop
+}) => {
   const { tasks: taskEvents, addTask, updateTask, deleteTask: deleteTaskContext } = useTasks();
   const { 
     subjects: baseSubjectExamEvents, 
@@ -120,12 +130,25 @@ const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), i
 
 
   const handleSelectEvent = (event: CalendarEvent) => {
+    // [FIX] If onEventSelect is provided (Instructor Mode), call it and return
+    if (onEventSelect) {
+        onEventSelect(event);
+        return;
+    }
+
+    if (readOnly) return; 
     if (isScheduleOnly && event.type !== EventType.SUBJECT) return; 
     setSelectedEvent(event);
     setShowEventModal(true);
   };
 
   const handleSelectSlot = (slotInfo: SlotInfo) => {
+    if (onSlotSelect) {
+        onSlotSelect(slotInfo);
+        return;
+    }
+
+    if (readOnly) return; 
     setSelectedSlot(slotInfo);
     setSelectedEvent(null);
     setShowEventModal(true);
@@ -181,6 +204,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), i
   };
 
   const handleEventDrop = (data: { event: CalendarEvent; start: Date; end: Date }) => {
+    if (readOnly) return; 
     if (isScheduleOnly && data.event.type !== EventType.SUBJECT) return; 
     const { event, start, end } = data;
     if (isRecurringSubject(event)) return; 
@@ -203,6 +227,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), i
   };
 
   const handleEventResize = (data: { event: CalendarEvent; start: Date; end: Date }) => {
+    if (readOnly) return; 
     if (isScheduleOnly && data.event.type !== EventType.SUBJECT) return; 
     const { event, start, end } = data;
     const baseEventId = event.id.includes('_') ? event.id.split('_')[0] : event.id;
@@ -220,7 +245,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), i
   };
 
   const eventStyleGetter = (event: CalendarEvent) => {
-    const isDraggable = !isScheduleOnly && !isRecurringSubject(event); 
+    const isDraggable = !readOnly && !isScheduleOnly && !isRecurringSubject(event); 
     const backgroundColor = event.color || (event.type === EventType.EXAM ? '#52c41a' : event.type === EventType.TASK ? '#ff4d4f' : 'var(--color-primary)');
     return { 
         style: {
@@ -279,9 +304,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), i
                     month={currentDate}
                     onMonthChange={setCurrentDate}
                     className="w-full rounded-md border-none"
-                    // Pass formatted markers
                     markedDates={mobileMarkers} 
-                    // Props from CalendarDisplay request
                     captionLayout="dropdown"
                     showOutsideDays={true}
                     fixedWeeks={true}
@@ -295,19 +318,21 @@ const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), i
                     <h3 className="font-bold text-[var(--color-text-primary)]">
                         {moment(selectedDate).format('MMMM D, YYYY')}
                     </h3>
-                    <button 
-                        onClick={() => {
-                            const start = new Date(selectedDate);
-                            start.setHours(9, 0, 0, 0);
-                            const end = new Date(start);
-                            end.setHours(10, 0, 0, 0);
-                            setSelectedEvent({ id: '', title: '', start, end, type: EventType.TASK } as CalendarEvent);
-                            setShowEventModal(true);
-                        }}
-                        className="text-xs bg-[var(--color-primary)] text-white px-3 py-1.5 rounded-full font-medium"
-                    >
-                        + Add
-                    </button>
+                    {!readOnly && ( 
+                        <button 
+                            onClick={() => {
+                                const start = new Date(selectedDate);
+                                start.setHours(9, 0, 0, 0);
+                                const end = new Date(start);
+                                end.setHours(10, 0, 0, 0);
+                                setSelectedEvent({ id: '', title: '', start, end, type: EventType.TASK } as CalendarEvent);
+                                setShowEventModal(true);
+                            }}
+                            className="text-xs bg-[var(--color-primary)] text-white px-3 py-1.5 rounded-full font-medium"
+                        >
+                            + Add
+                        </button>
+                    )}
                 </div>
 
                 <div className="overflow-y-auto flex-1 space-y-3 pr-1">
@@ -363,7 +388,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), i
                     toolbar: (props: any) => (
                     <CalendarToolbar 
                         {...props}
-                        onFilterChange={setFilter}
+                        onFilterChange={setFilter} 
                         filter={filter}
                         availableViews={toolbarViews} 
                     />
@@ -371,12 +396,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), i
                     event: (props: EventProps<CalendarEvent>) => <EventComponent {...props} view={view} />,
                 }}
                 eventPropGetter={eventStyleGetter}
-                selectable={true}
+                selectable={!readOnly || !!onSlotSelect} 
                 onSelectSlot={handleSelectSlot}
                 onSelectEvent={handleSelectEvent}
                 onEventDrop={handleEventDrop}
                 onEventResize={handleEventResize}
-                resizable={true}
+                resizable={!readOnly} 
                 dayLayoutAlgorithm="no-overlap"
                 formats={{
                     timeGutterFormat: 'HH:mm',
@@ -386,7 +411,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), i
         </div>
       )}
 
-      {showEventModal && (
+      {/* Render generic event modal only if NOT overridden by onSlotSelect */}
+      {showEventModal && !readOnly && !onSlotSelect && !onEventSelect && (
         <EventModal
           event={selectedEvent}
           slotInfo={selectedSlot}
@@ -401,7 +427,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ initialDate = new Date(), i
         />
       )}
 
-      {showDeleteModal && selectedEvent && (
+      {showDeleteModal && selectedEvent && !readOnly && (
         <DeleteEventModal
           event={selectedEvent}
           onConfirm={handleConfirmDelete} 
