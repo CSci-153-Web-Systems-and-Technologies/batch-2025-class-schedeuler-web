@@ -1,8 +1,9 @@
 "use client";
 
 import React from 'react';
-import { Briefcase, Calendar, MapPin, User } from 'lucide-react';
+import { Briefcase, Calendar, MapPin } from 'lucide-react';
 import { Badge } from '@/app/components/ui/Badge';
+import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
 
 export interface EnrolledClassProps {
   id: string;
@@ -12,6 +13,9 @@ export interface EnrolledClassProps {
   schedule: string;
   room: string;
   status: 'pending' | 'approved' | 'rejected';
+  // [NEW] Allow passing raw data or extra fields if needed, 
+  // but strictly we just need the onClick handler here.
+  onClick?: () => void;
 }
 
 const EnrolledClassCard: React.FC<EnrolledClassProps> = ({
@@ -20,11 +24,41 @@ const EnrolledClassCard: React.FC<EnrolledClassProps> = ({
   instructor,
   schedule,
   room,
-  status
+  status,
+  onClick
 }) => {
+  const { theme } = useThemeContext();
+
+  const getStatusStyle = (status: string) => {
+    if (theme === 'dark') {
+      switch (status) {
+        case 'approved': 
+          return { backgroundColor: 'rgba(20, 83, 45, 0.3)', color: '#4ade80', border: '1px solid transparent' };
+        case 'pending': 
+          return { backgroundColor: 'rgba(120, 53, 15, 0.3)', color: '#fbbf24', border: '1px solid transparent' };
+        case 'rejected': 
+          return { backgroundColor: 'rgba(127, 29, 29, 0.3)', color: '#f87171', border: '1px solid transparent' };
+        default: 
+          return { backgroundColor: '#374151', color: '#9CA3AF' };
+      }
+    } else {
+      switch (status) {
+        case 'approved': 
+          return { backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0' };
+        case 'pending': 
+          return { backgroundColor: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A' };
+        case 'rejected': 
+          return { backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA' };
+        default: 
+          return { backgroundColor: '#F3F4F6', color: '#374151' };
+      }
+    }
+  };
+
   return (
     <div 
-      className="relative flex flex-col md:flex-row md:items-center justify-between p-5 rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden transition-all hover:shadow-md"
+      onClick={onClick}
+      className={`relative flex flex-col md:flex-row md:items-center justify-between p-5 rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden transition-all hover:shadow-md ${onClick ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
       style={{ backgroundColor: 'var(--color-components-bg)' }}
     >
       {/* Blue Left Border Accent */}
@@ -65,17 +99,13 @@ const EnrolledClassCard: React.FC<EnrolledClassProps> = ({
 
       {/* Status Badge */}
       <div className="mt-4 md:mt-0 md:ml-4 flex-shrink-0 self-start md:self-center">
-        <span 
-          className={`px-3 py-1 rounded-full text-xs font-bold ${
-            status === 'approved' 
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-              : status === 'pending'
-              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-          }`}
+        <Badge 
+          variant="secondary"
+          className="px-3 py-1 rounded-full text-xs font-bold capitalize"
+          style={getStatusStyle(status)}
         >
-          {status === 'approved' ? 'Active' : status.charAt(0).toUpperCase() + status.slice(1)}
-        </span>
+          {status === 'approved' ? 'Active' : status}
+        </Badge>
       </div>
     </div>
   );
