@@ -9,7 +9,6 @@ import { Loader2 } from 'lucide-react';
 import EventModal from '../calendar/components/EventModal';
 import { CalendarEvent, EventType, RepeatPattern } from '@/types/calendar';
 
-// Extend the props to include raw data needed for the modal
 interface ClassData extends EnrolledClassProps {
   description?: string;
   color?: string;
@@ -23,7 +22,6 @@ export default function StudentClassesPage() {
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // [NEW] State for Modal
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -76,7 +74,6 @@ export default function StudentClassesPage() {
             schedule: scheduleStr,
             room: cls.location || 'Online', 
             status: enrollment.status,
-            // Extra fields for Modal
             description: cls.description,
             color: cls.color,
             startTime: cls.start_time,
@@ -92,12 +89,10 @@ export default function StudentClassesPage() {
     setLoading(false);
   }, [supabase]);
 
-  // Initial Fetch
   useEffect(() => {
     fetchClasses();
   }, [fetchClasses]);
 
-  // Real-time Subscription
   useEffect(() => {
     let channel: any;
 
@@ -142,12 +137,7 @@ export default function StudentClassesPage() {
     };
   }, [supabase, fetchClasses]);
 
-  // [NEW] Handler to open modal
   const handleClassClick = (cls: ClassData) => {
-    // We construct a CalendarEvent. 
-    // IMPORTANT: ID must start with 'class_' for EventModal to treat it as Read Only.
-    
-    // Construct Date objects for time (using today as base)
     const now = new Date();
     const sTime = cls.startTime || "09:00:00";
     const eTime = cls.endTime || "10:00:00";
@@ -162,7 +152,7 @@ export default function StudentClassesPage() {
     end.setHours(eH, eM, 0, 0);
 
     const event: CalendarEvent = {
-        id: `class_${cls.id}`, // Prefix triggers Read-Only in EventModal
+        id: `class_${cls.id}`, 
         title: cls.name,
         type: EventType.SUBJECT,
         start,
@@ -172,7 +162,7 @@ export default function StudentClassesPage() {
         subjectCode: cls.code,
         instructor: cls.instructor,
         location: cls.room,
-        repeatPattern: RepeatPattern.WEEKLY, // Assuming classes repeat
+        repeatPattern: RepeatPattern.WEEKLY, 
         repeatDays: cls.repeatDays,
         classType: cls.classType
     };
@@ -209,7 +199,7 @@ export default function StudentClassesPage() {
                 <EnrolledClassCard 
                     key={cls.id} 
                     {...cls} 
-                    // Only approved/active classes usually have full details visible/relevant
+
                     onClick={() => handleClassClick(cls)}
                 />
               ))}
@@ -223,13 +213,12 @@ export default function StudentClassesPage() {
         </div>
       </div>
 
-      {/* [NEW] Event Modal for Read-Only Details */}
       {isModalOpen && selectedEvent && (
         <EventModal
             event={selectedEvent}
             onClose={() => setIsModalOpen(false)}
-            onSave={() => {}} // Read-only, no save needed
-            onDelete={() => {}} // Read-only, no delete needed
+            onSave={() => {}} 
+            onDelete={() => {}} 
             isScheduleOnly={false}
         />
       )}

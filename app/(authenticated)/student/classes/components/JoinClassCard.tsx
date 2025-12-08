@@ -101,7 +101,6 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
         </button>
       </div>
 
-      {/* [NEW] Privacy Notice */}
       <div 
         className="mt-4 flex items-start gap-2 p-3 rounded-lg text-xs md:text-sm"
         style={{

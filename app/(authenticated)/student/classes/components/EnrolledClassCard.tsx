@@ -13,8 +13,6 @@ export interface EnrolledClassProps {
   schedule: string;
   room: string;
   status: 'pending' | 'approved' | 'rejected';
-  // [NEW] Allow passing raw data or extra fields if needed, 
-  // but strictly we just need the onClick handler here.
   onClick?: () => void;
 }
 
@@ -61,35 +59,29 @@ const EnrolledClassCard: React.FC<EnrolledClassProps> = ({
       className={`relative flex flex-col md:flex-row md:items-center justify-between p-5 rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden transition-all hover:shadow-md ${onClick ? 'cursor-pointer hover:scale-[1.01]' : ''}`}
       style={{ backgroundColor: 'var(--color-components-bg)' }}
     >
-      {/* Blue Left Border Accent */}
       <div 
         className="absolute left-0 top-0 bottom-0 w-1.5" 
         style={{ backgroundColor: 'var(--color-primary)' }} 
       />
 
       <div className="flex-1 pl-3 space-y-2">
-        {/* Header */}
         <div className="flex flex-wrap items-baseline gap-2">
           <h3 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
             {code} - {name}
           </h3>
         </div>
 
-        {/* Details Row */}
         <div className="flex flex-wrap gap-y-2 gap-x-6 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {/* Instructor */}
           <div className="flex items-center gap-1.5">
             <Briefcase size={16} className="opacity-70" />
             <span>{instructor}</span>
           </div>
 
-          {/* Schedule */}
           <div className="flex items-center gap-1.5">
             <Calendar size={16} className="opacity-70" />
             <span>{schedule}</span>
           </div>
 
-          {/* Room */}
           <div className="flex items-center gap-1.5">
             <MapPin size={16} className="opacity-70" />
             <span>{room}</span>
@@ -97,7 +89,6 @@ const EnrolledClassCard: React.FC<EnrolledClassProps> = ({
         </div>
       </div>
 
-      {/* Status Badge */}
       <div className="mt-4 md:mt-0 md:ml-4 flex-shrink-0 self-start md:self-center">
         <Badge 
           variant="secondary"

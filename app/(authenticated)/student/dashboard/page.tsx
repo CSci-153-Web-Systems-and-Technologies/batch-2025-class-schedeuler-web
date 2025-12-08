@@ -5,8 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client"; 
 import { useToast } from "@/app/context/ToastContext"; 
 import moment from 'moment';
-
-// Components
 import AppBreadcrumb from "@/app/components/ui/AppBreadCrumb";
 import Greeting from "@/app/(authenticated)/components/Greeting";
 import CalendarDisplay from "@/app/(authenticated)/components/CalendarDisplay";
@@ -16,7 +14,6 @@ import JoinClassButton from "./components/JoinClassButton";
 import PomodoroTimer from "./components/PomodoroTimer";
 import SubjectsList from "./components/SubjectsList";
 
-// Types & Context
 import { ClassCardProps } from "../../components/ClassCard";
 import { EventType } from '@/types/calendar';
 import { useSubjects } from "../subjects/SubjectContext";
@@ -32,7 +29,6 @@ export default function StudentDashboard() {
   const { showToast } = useToast();
   const toastShownRef = useRef(false);
 
-  // --- Login/Signup Toasts ---
   useEffect(() => {
     const toastType = searchParams.get('toast');
     if (toastType && !toastShownRef.current) {
@@ -44,7 +40,6 @@ export default function StudentDashboard() {
     }
   }, [searchParams, showToast, router]);
 
-  // --- Fetch User ---
   useEffect(() => {
     async function getUser() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -63,7 +58,6 @@ export default function StudentDashboard() {
     getUser();
   }, [supabase]);
 
-  // --- Calculate Today's Schedule ---
   const todaySchedule = useMemo(() => {
      const eventsToday = generateRecurringEvents(allSubjects, new Date(), 'day');
      const subjectInstances = eventsToday.filter(e => e.type === EventType.SUBJECT);
@@ -77,7 +71,6 @@ export default function StudentDashboard() {
      }));
   }, [allSubjects]);
 
-  // --- Subject List Data ---
   const subjectsListData = useMemo(() => {
       const uniqueSubjects = allSubjects.filter(subj => subj.type === EventType.SUBJECT);
       return uniqueSubjects.map(subj => ({
@@ -132,7 +125,7 @@ export default function StudentDashboard() {
         </div>
 
         {/* Subjects List Widget */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0">  
           <SubjectsList subjects={subjectsListData} />
         </div>  
       </div>

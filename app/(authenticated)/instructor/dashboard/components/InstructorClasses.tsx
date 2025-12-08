@@ -7,7 +7,6 @@ import { useSubjects } from "@/app/(authenticated)/student/subjects/SubjectConte
 import { generateRecurringEvents } from "@/utils/calendarUtils";
 import { EventType, CalendarEvent } from "@/types/calendar";
 import moment from "moment";
-import Link from "next/link"; // For the "View Schedule" or similar if needed
 
 export default function InstructorClasses() {
   const { subjects: allSubjects, loading } = useSubjects();
@@ -15,10 +14,8 @@ export default function InstructorClasses() {
 
   const todayClasses = useMemo(() => {
     const today = new Date();
-    // Generate events for today based on recurrence patterns
     const eventsToday = generateRecurringEvents(allSubjects, today, 'day');
     
-    // Filter for subjects and sort by time
     return eventsToday
       .filter(e => e.type === EventType.SUBJECT)
       .sort((a, b) => a.start.getTime() - b.start.getTime())

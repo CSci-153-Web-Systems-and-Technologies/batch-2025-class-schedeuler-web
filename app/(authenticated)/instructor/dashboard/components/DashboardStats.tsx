@@ -66,26 +66,20 @@ export default function DashboardStats() {
   const supabase = createClient();
   const [totalStudents, setTotalStudents] = useState(0);
 
-  // 1. Calculate Classes This Week (Schedule Events)
   const classesThisWeek = React.useMemo(() => {
-    // Generate ALL instances for the current week based on repeat rules
     const now = new Date();
     const events = generateRecurringEvents(subjects, now, 'week'); 
     
-    // Filter strictly for this week (Subject events only)
     return events.filter(e => e.type === EventType.SUBJECT).length;
   }, [subjects]);
 
-  // 2. Calculate Pending Tasks
   const pendingTasks = tasks.filter(t => t.type === EventType.TASK && !t.completed).length;
 
-  // 3. Fetch Total Enrolled Students (Direct DB call)
   useEffect(() => {
     async function fetchStudentCount() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get all classes owned by instructor
       const { data: classes } = await supabase.from('classes').select('id').eq('instructor_id', user.id);
       
       if (classes && classes.length > 0) {
