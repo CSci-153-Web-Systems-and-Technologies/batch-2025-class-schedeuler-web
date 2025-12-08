@@ -32,7 +32,6 @@ const EventModal: React.FC<EventModalProps> = ({
 }) => {
   const { showToast } = useToast(); 
 
-  // [NEW] Determine if this is an official class (Read Only)
   const isOfficialClass = event?.id?.startsWith('class_');
   
   const defaultEvent = isScheduleOnly 
@@ -80,7 +79,7 @@ const EventModal: React.FC<EventModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isOfficialClass) return; // Prevent submission
+    if (isOfficialClass) return; 
     
     if (!formData.title?.trim()) {
         showToast("Missing Field", "Please enter a title.", "error");
