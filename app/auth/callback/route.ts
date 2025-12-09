@@ -45,7 +45,22 @@ export async function GET(request: Request) {
       if (!existingProfile) {
         return NextResponse.redirect(new URL('/select-account-type', request.url))
       } else {
-        const dest = existingProfile.account_type === 'instructor' 
+        const role = existingProfile.account_type;
+        
+        if (user.user_metadata?.account_type !== role) {
+            const { error: adminError } = await supabase.auth.admin.updateUserById(user.id, {
+                user_metadata: { 
+                    ...user.user_metadata,
+                    account_type: role
+                }
+            });
+            
+            if (adminError) {
+                console.error("Admin update failed:", adminError);
+            }
+        }
+        
+        const dest = role === 'instructor' 
           ? '/instructor/dashboard' 
           : '/student/dashboard';
         return NextResponse.redirect(new URL(`${dest}?toast=login`, request.url))
