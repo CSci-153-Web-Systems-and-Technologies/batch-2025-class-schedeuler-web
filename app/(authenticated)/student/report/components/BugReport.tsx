@@ -1,4 +1,3 @@
-// app/(authenticated)/student/report/components/BugReport.tsx
 "use client";
 
 import { useState } from "react";
@@ -55,6 +54,10 @@ export default function BugReport() {
 
       if (result.error) {
         showToast("Submission Failed", result.error, "error");
+      } else if (result.warning) {
+        setIsSubmitted(true);
+        setFormData({ subject: "", category: "", message: "" });
+        showToast("Report Saved", result.warning, "warning");
       } else {
         setIsSubmitted(true);
         setFormData({ subject: "", category: "", message: "" });
