@@ -28,6 +28,7 @@ export async function updateSession(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  const pathname = request.nextUrl.pathname;
 
   const publicRoutes = [
     '/login',
@@ -40,12 +41,8 @@ export async function updateSession(request: NextRequest) {
   ]
 
   const isPublicRoute = publicRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
+    pathname.startsWith(route)
   )
-
-  if (!user && isPublicRoute) {
-    return supabaseResponse
-  }
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
@@ -53,23 +50,68 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
   
-  if (request.nextUrl.pathname === '/') {
+
+  if (user) {
+      let userRole = user.user_metadata.account_type as ('student' | 'instructor' | undefined); 
+      
+      const isSelectAccountPage = pathname.startsWith('/select-account-type');
+      
+      if (!userRole) {
+          const { data: profile } = await supabase
+              .from('profiles')
+              .select('account_type')
+              .eq('id', user.id)
+              .single();
+              
+          const dbRole = profile?.account_type as ('student' | 'instructor' | undefined);
+
+          if (!dbRole) {
+              if (!isSelectAccountPage) {
+                  const url = request.nextUrl.clone();
+                  url.pathname = '/select-account-type';
+                  return NextResponse.redirect(url);
+              }
+              return supabaseResponse;
+          }
+          userRole = dbRole;
+      }
+      
+      if (userRole) {
+          const actualRole = userRole;
+          const correctDashboard = `/${actualRole}/dashboard`;
+          const requestedPrefix = pathname.split('/')[1];
+          
+          if (actualRole === 'instructor' && pathname.startsWith('/student/')) {
+              const url = request.nextUrl.clone();
+              url.pathname = '/error'; 
+              return NextResponse.redirect(url);
+          }
+          
+          if (actualRole === 'student' && pathname.startsWith('/instructor/')) {
+              const url = request.nextUrl.clone();
+              url.pathname = '/error'; 
+              return NextResponse.redirect(url);
+          }
+
+          if (isPublicRoute && !pathname.startsWith('/landing') && !pathname.startsWith('/auth/callback') && !pathname.startsWith('/error')) {
+              const url = request.nextUrl.clone();
+              url.pathname = correctDashboard;
+              return NextResponse.redirect(url);
+          }
+      }
+  }
+
+  if (!user && pathname === '/') {
     const url = request.nextUrl.clone()
     url.pathname = '/landing'
     return NextResponse.redirect(url)
   }
 
-  return supabaseResponse
+  return supabaseResponse;
 }
+
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
