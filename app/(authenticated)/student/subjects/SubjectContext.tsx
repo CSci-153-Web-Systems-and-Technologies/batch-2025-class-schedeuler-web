@@ -152,6 +152,7 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
     fetchSubjects();
   }, [fetchSubjects]);
 
+
   useEffect(() => {
     let channel: any;
 
@@ -167,7 +168,7 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
           { event: '*', schema: 'public', table: 'events', filter: `user_id=eq.${user.id}` },
           () => fetchSubjects(true)
         )
-        
+
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'enrollments' },
@@ -176,17 +177,39 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
         
         .on(
           'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'classes' },
+          { event: '*', schema: 'public', table: 'classes' },
           (payload: any) => {
-             const updatedClassId = `class_${payload.new.id}`;
+             if (payload.eventType === 'INSERT') {
+                 if (payload.new.instructor_id === user.id) {
+                     fetchSubjects(true);
+                 }
+             }
              
-             const isRelevant = subjectsRef.current.some(s => s.id === updatedClassId);
-
-             if (isRelevant) {
-                 const newEvent = mapClassToEvent(payload.new);
-                 setSubjects(prev => prev.map(s => s.id === updatedClassId ? newEvent : s));
+             else if (payload.eventType === 'UPDATE') {
+                 const updatedClassId = `class_${payload.new.id}`;
                  
-                 fetchSubjects(true); 
+                 const isMyClass = payload.new.instructor_id === user.id;
+                 const isTracked = subjectsRef.current.some(s => s.id === updatedClassId);
+
+                 if (isMyClass || isTracked) {
+                     const newEvent = mapClassToEvent(payload.new);
+                     setSubjects(prev => {
+                         const exists = prev.some(s => s.id === updatedClassId);
+                         if (exists) {
+                             return prev.map(s => s.id === updatedClassId ? newEvent : s);
+                         } else if (isMyClass) {
+                             return [...prev, newEvent];
+                         }
+                         return prev;
+                     });
+                     
+                     fetchSubjects(true); 
+                 }
+             }
+             
+             else if (payload.eventType === 'DELETE') {
+                 const deletedId = `class_${payload.old.id}`;
+                 setSubjects(prev => prev.filter(s => s.id !== deletedId));
              }
           }
         )
