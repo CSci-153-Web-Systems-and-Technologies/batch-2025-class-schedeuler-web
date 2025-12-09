@@ -1,19 +1,16 @@
 // app/(authenticated)/instructor/tasks/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import AppBreadcrumb from "@/app/components/ui/AppBreadCrumb";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { Plus, Trash2, Save, X } from "lucide-react"; 
-// Import shared context and types
 import { useTasks } from "@/app/(authenticated)/student/tasks/TaskContext"; 
 import { CalendarEvent, EventType } from '@/types/calendar'; 
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from "@/app/context/ToastContext";
-
-// --- Helpers ---
 
 function getTaskProgress(task: CalendarEvent): number {
     const estimate = task.taskEstimate;
@@ -64,7 +61,9 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onSelect, isSelected, onToggl
 
     const handleCheckboxChange = (checked: boolean) => {
         onToggle(task.id, checked);
-        if (isSelected) onSelect({ ...task, completed: checked, taskEstimate: checked ? '100%' : '0%' });
+        if (isSelected) {
+             onSelect({ ...task, completed: checked, taskEstimate: checked ? '100%' : '0%' });
+        }
     };
 
     return (
@@ -115,7 +114,7 @@ export default function InstructorTasksPage() {
     const [activeTab, setActiveTab] = useState<"current" | "past" | "overdue">('current');
     const [isCreating, setIsCreating] = useState(false);
 
-    // --- Handlers ---
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const handleTaskToggle = (taskId: string, checked: boolean) => {
         if (checked) {
@@ -204,12 +203,18 @@ export default function InstructorTasksPage() {
     const handleProgressChange = (newProgress: number) => {
         if (!selectedTask) return;
         const completed = newProgress === 100;
+        
         const updatedTask = { ...selectedTask, taskEstimate: `${newProgress}%`, completed: completed };
-        
-        setSelectedTask(updatedTask); 
-        
+        setSelectedTask(updatedTask);
+
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+
         if (!isCreating) {
-            updateTask(updatedTask);
+            saveTimeoutRef.current = setTimeout(() => {
+                updateTask(updatedTask);
+            }, 500);
         }
     };
 
@@ -258,7 +263,6 @@ export default function InstructorTasksPage() {
         addTask(selectedTask); 
         setIsCreating(false);
         setActiveTab('current');
-        showToast("Success", "Task created successfully.", "success");
     };
 
     const handleCancelCreate = () => {
@@ -266,7 +270,11 @@ export default function InstructorTasksPage() {
         setSelectedTask(null);
     };
 
-    // --- Render ---
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        };
+    }, []);
 
     return (
         <div
@@ -491,7 +499,7 @@ export default function InstructorTasksPage() {
                             <p className="text-xl font-semibold text-[var(--color-text-primary)]">
                                 No task selected
                             </p>
-                            <p className="text-[var(--color-text-secondary)] mt-2">
+                            <p className="text--[var(--color-text-secondary)] mt-2">
                                 Select a task from the list to view details or create a new one.
                             </p>
                             <Button 
