@@ -13,13 +13,11 @@ export async function submitBugReport(formData: {
 }) {
   const supabase = await createClient();
 
-  // 1. Authenticate User
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return { error: "You must be logged in to submit a report." };
   }
 
-  // 2. SPAM CHECK
   const { data: lastReport, error: fetchError } = await supabase
     .from('reports')
     .select('created_at')
@@ -28,8 +26,6 @@ export async function submitBugReport(formData: {
     .limit(1)
     .single();
 
-  // Ignore error code 'PGRST116' (JSON object requested, multiple (or no) rows returned)
-  // which happens when there are no reports yet.
   if (lastReport) {
     const lastDate = new Date(lastReport.created_at);
     const now = new Date();
@@ -43,7 +39,6 @@ export async function submitBugReport(formData: {
     }
   }
 
-  // 3. Save to Database
   const { error: dbError } = await supabase
     .from('reports')
     .insert({
@@ -57,10 +52,7 @@ export async function submitBugReport(formData: {
     console.error("Database Error:", dbError);
     return { error: "Failed to log report. Please try again." };
   }
-
-  // 4. Send Email (With Debugging)
   try {
-    // Debug: Check if env vars exist (Do not log the actual password!)
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       console.error("❌ MISSING ENV VARIABLES: Make sure GMAIL_USER and GMAIL_APP_PASSWORD are in .env.local");
       throw new Error("Server misconfiguration: Missing email credentials.");
@@ -74,7 +66,6 @@ export async function submitBugReport(formData: {
       },
     });
 
-    // Verify connection configuration
     await new Promise((resolve, reject) => {
         transporter.verify(function (error, success) {
             if (error) {
@@ -109,7 +100,6 @@ export async function submitBugReport(formData: {
 
   } catch (emailError: any) {
     console.error("❌ EMAIL SENDING FAILED:", emailError.message);
-    // Return a warning so the user knows the report was saved but email failed
     return { 
       success: true, 
       warning: "Report saved to database, but email notification failed. Check server logs." 
