@@ -5,7 +5,6 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation' 
 import { createClient } from '@/utils/supabase/server'
 
-// Standard response type for Auth actions
 type AuthResponse = {
   success?: boolean;
   error?: string;
@@ -37,9 +36,8 @@ export async function login(prevState: any, formData: FormData): Promise<AuthRes
       return { error: 'Error fetching user profile' }
     }
 
-    // [FIX] OPTIMIZATION: Store role in JWT metadata on successful login
     if (profile?.account_type && authData.user.user_metadata?.account_type !== profile.account_type) {
-        const adminSupabase = await createClient() // Use admin client for this action
+        const adminSupabase = await createClient() 
         await adminSupabase.auth.admin.updateUserById(authData.user.id, {
             user_metadata: { 
                 ...authData.user.user_metadata,
@@ -63,13 +61,15 @@ export async function login(prevState: any, formData: FormData): Promise<AuthRes
 export async function signup(prevState: any, formData: FormData): Promise<AuthResponse> {
   const supabase = await createClient()
 
+  const accountType = formData.get('acc-type') as string;
+
   const data = {
     email: formData.get('email') as string,
     password: formData.get('password') as string,
     options: {
       data: {
         name: formData.get('name') as string,
-        account_type: formData.get('acc-type') as string, 
+        account_type: accountType, 
       }
     }
   }
@@ -88,7 +88,7 @@ export async function signup(prevState: any, formData: FormData): Promise<AuthRe
           id: authData.user.id,
           name: formData.get('name') as string,
           email: formData.get('email') as string,
-          account_type: formData.get('acc-type') as string,
+          account_type: accountType,
         }
       ])
 
@@ -96,7 +96,6 @@ export async function signup(prevState: any, formData: FormData): Promise<AuthRe
       return { error: 'Error creating user profile' }
     }
 
-    const accountType = formData.get('acc-type') as string
     const url = accountType === 'instructor' 
       ? '/instructor/dashboard' 
       : '/student/dashboard';
