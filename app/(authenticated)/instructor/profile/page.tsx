@@ -11,28 +11,27 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/Avatar"
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
 import { User, Mail, BadgeCheck, Loader2, Save, Camera, Trash2 } from 'lucide-react';
-import { useUser } from '@/app/context/UserContext'; 
+import { useUser } from '@/app/context/UserContext';
+import { getInitialsWithoutMiddle } from '@/utils/stringUtils';
 
 export default function InstructorProfilePage() {
   const [updating, setUpdating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [name, setName] = useState("");
   
-  // Use global context for instant updates
   const { profile, loading, refreshProfile } = useUser();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
   const { showToast } = useToast();
 
-  // Sync local state when profile loads
   useEffect(() => {
     if (profile) {
       setName(profile.name || "");
     }
   }, [profile]);
 
-  // --- HANDLE AVATAR UPLOAD ---
+
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!profile) return;
     try {
@@ -45,21 +44,18 @@ export default function InstructorProfilePage() {
       const fileExt = file.name.split('.').pop();
       const fileName = `${profile.id}-${Math.random()}.${fileExt}`;
       const filePath = `${fileName}`;
-      const bucketName = 'avatars'; // Assuming your bucket is named 'avatars'
+      const bucketName = 'avatars'; 
 
-      // 1. Upload new image
       const { error: uploadError } = await supabase.storage
         .from(bucketName)
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // 2. Get Public URL
       const { data: { publicUrl } } = supabase.storage
         .from(bucketName)
         .getPublicUrl(filePath);
 
-      // 3. Update profile with new URL
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
@@ -69,7 +65,6 @@ export default function InstructorProfilePage() {
 
       showToast("Success", "Profile picture updated!", "success");
       
-      // 4. Update global state
       await refreshProfile(); 
 
     } catch (error: any) {
@@ -79,13 +74,11 @@ export default function InstructorProfilePage() {
     }
   };
 
-  // --- HANDLE REMOVE AVATAR ---
   const handleRemoveAvatar = async () => {
     if (!profile) return;
     try {
         setUploading(true);
 
-        // 1. Update profile to remove avatar URL
         const { error } = await supabase
             .from('profiles')
             .update({ avatar_url: null })
@@ -94,8 +87,7 @@ export default function InstructorProfilePage() {
         if (error) throw error;
 
         showToast("Removed", "Profile photo removed.", "success");
-        
-        // 2. Update global state
+
         await refreshProfile();
 
     } catch (error: any) {
@@ -105,7 +97,6 @@ export default function InstructorProfilePage() {
     }
   };
 
-  // --- HANDLE NAME UPDATE ---
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
@@ -124,15 +115,6 @@ export default function InstructorProfilePage() {
       showToast("Success", "Profile updated successfully.", "success");
       await refreshProfile();
     }
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   if (loading) {
@@ -158,7 +140,7 @@ export default function InstructorProfilePage() {
                 <Avatar className="h-32 w-32 mb-4 border-4 border-[var(--color-components-bg)] shadow-lg transition-opacity group-hover:opacity-80">
                   <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
                   <AvatarFallback className="text-4xl bg-blue-100 text-blue-600">
-                    {getInitials(name)}
+                    {getInitialsWithoutMiddle(name)}
                   </AvatarFallback>
                 </Avatar>
                 
@@ -195,7 +177,6 @@ export default function InstructorProfilePage() {
                     Change Photo
                 </Button>
 
-                {/* [NEW] Remove Photo Button - Only shows if avatar exists */}
                 {profile?.avatar_url && (
                     <Button 
                         variant="outline"
