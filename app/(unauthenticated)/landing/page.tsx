@@ -1,5 +1,7 @@
+// app/(unauthenticated)/landing/page.tsx
 "use client";
-import React, { useEffect, useRef } from 'react';
+
+import React, { useEffect, useRef, Suspense } from 'react'; // Added Suspense
 import { useSearchParams, useRouter } from 'next/navigation'; 
 import { useToast } from '@/app/context/ToastContext'; 
 import LandingHeader from "@/app/(unauthenticated)/landing/components/LandingHeader";
@@ -9,7 +11,7 @@ import FeatureSection from "./components/FeatureSection";
 import StepSection from "./components/StepSection";
 import BenefitSection from "./components/BenefitSection";
 
-export default function Home() {
+function ToastListener() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { showToast } = useToast();
@@ -21,13 +23,20 @@ export default function Home() {
       showToast("Logged out", "You have been successfully logged out.", "info");
       
       toastShownRef.current = true;
-      
-      router.replace('/landing');
+      router.replace('/landing'); 
     }
   }, [searchParams, showToast, router]);
 
+  return null; 
+}
+
+export default function Home() {
   return (
     <div className="font-sans grid min-h-screen grid-rows-[auto_1fr_auto] bg-landing">
+      <Suspense fallback={null}>
+        <ToastListener />
+      </Suspense>
+
       <LandingHeader />
       <main>
         <HeroSection className="px-8 lg:px-16" />
