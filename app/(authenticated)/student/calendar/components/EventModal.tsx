@@ -15,6 +15,7 @@ interface EventModalProps {
   onDelete: () => void;
   onClose: () => void;
   isScheduleOnly?: boolean; 
+  disableSubjectCreation?: boolean; 
 }
 
 const COLOR_OPTIONS = [
@@ -29,12 +30,15 @@ const EventModal: React.FC<EventModalProps> = ({
   onDelete,
   onClose,
   isScheduleOnly = false,
+  disableSubjectCreation = false,
 }) => {
   const { showToast } = useToast(); 
 
   const isOfficialClass = event?.id?.startsWith('class_');
   
-  const defaultEvent = isScheduleOnly 
+  const shouldDefaultToSubject = isScheduleOnly;
+  
+  const defaultEvent = shouldDefaultToSubject
     ? {
         type: EventType.SUBJECT,
         color: COLOR_OPTIONS[0],
@@ -64,6 +68,7 @@ const EventModal: React.FC<EventModalProps> = ({
         ...prev,
         start: slotInfo.start,
         end: new Date(slotInfo.start.getTime() + 60 * 60 * 1000), 
+        ...defaultEvent
       }));
     } else {
          setFormData(prev => ({
@@ -75,11 +80,16 @@ const EventModal: React.FC<EventModalProps> = ({
             ...defaultEvent
          }));
     }
-  }, [event, slotInfo, isScheduleOnly]); 
+  }, [event, slotInfo, isScheduleOnly, disableSubjectCreation]); 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isOfficialClass) return; 
+    
+    if (disableSubjectCreation && formData.type === EventType.SUBJECT) {
+        showToast("Restricted", "Subject creation is not allowed here.", "error");
+        return;
+    }
     
     if (!formData.title?.trim()) {
         showToast("Missing Field", "Please enter a title.", "error");
@@ -174,7 +184,7 @@ const EventModal: React.FC<EventModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[var(--color-components-bg)] rounded-lg p-6 w-full max-w-md border border-[var(--color-border)] flex flex-col max-h-[90vh]">
+      <div className="bg-[var(--color-components-bg)] rounded-lg p-6 w-full max-w-md border border-[var(--color-border)] shadow-xl flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center mb-4 flex-shrink-0">
             <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
             {isOfficialClass 
@@ -196,17 +206,19 @@ const EventModal: React.FC<EventModalProps> = ({
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">Event Type</label>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded transition-colors ${
-                      formData.type === EventType.SUBJECT 
-                        ? 'bg-[var(--color-primary)] text-white' 
-                        : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
-                    }`}
-                    onClick={() => setFormData({...formData, type: EventType.SUBJECT, repeatPattern: RepeatPattern.WEEKLY, color: COLOR_OPTIONS[0]})}
-                  >
-                    Subject
-                  </button>
+                  {!disableSubjectCreation && (
+                    <button
+                      type="button"
+                      className={`px-4 py-2 rounded transition-colors ${
+                        formData.type === EventType.SUBJECT 
+                          ? 'bg-[var(--color-primary)] text-white' 
+                          : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
+                      }`}
+                      onClick={() => setFormData({...formData, type: EventType.SUBJECT, repeatPattern: RepeatPattern.WEEKLY, color: COLOR_OPTIONS[0]})}
+                    >
+                      Subject
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`px-4 py-2 rounded transition-colors ${
