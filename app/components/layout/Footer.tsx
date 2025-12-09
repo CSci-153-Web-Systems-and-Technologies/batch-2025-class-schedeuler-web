@@ -1,19 +1,20 @@
+// app/components/layout/Footer.tsx
 "use client";
 import Image from "next/image";
 import { NavLink } from "@/types/sections";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS: NavLink[] = [
-  { href: "#about", label: "About" },
-  { href: "#support", label: "Support" },
-  { href: "#privacy", label: "Privacy" },
-  { href: "#terms", label: "Terms" },
+  { href: "/about", label: "About" },
+  { href: "/support", label: "Support" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
 ];
 
 const SOCIAL_LINKS = [
-  { href: "", icon: "/icons/facebook.svg", alt: "Facebook" },
-  { href: "", icon: "/icons/github.svg", alt: "GitHub" },
-  { href: "", icon: "/icons/linkedin.svg", alt: "LinkedIn" },
+  { href: "https://github.com/BinongoIsrael", icon: "/icons/github.svg", alt: "GitHub" },
+  { href: "https://www.linkedin.com/in/israel-binongo-9ba151272/", icon: "/icons/linkedin.svg", alt: "LinkedIn" },
+  { href: "https://www.facebook.com/israel.binongo.7", icon: "/icons/facebook.svg", alt: "Facebook" },
 ] as const;
 
 const NAV_LINK_CLASSES = "font-bold lg:text-base md:text-[10px] text-foreground px-2 py-[6px] hover:bg-primary/10 rounded-xl transition-colors active:bg-primary/20";
@@ -37,7 +38,12 @@ const Footer = () => {
     <ul className={cn("flex gap-4", mobile ? "flex" : "hidden md:flex")}>
       {SOCIAL_LINKS.map((social) => (
         <li key={social.alt}>
-          <a href={social.href} className="hover:opacity-70 transition-opacity">
+          <a 
+            href={social.href} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="hover:opacity-70 transition-opacity"
+          >
             <Image src={social.icon} alt={social.alt} width={24} height={24} />
           </a>
         </li>
