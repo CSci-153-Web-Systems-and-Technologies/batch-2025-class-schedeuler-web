@@ -1,7 +1,7 @@
 // app/(authenticated)/student/tasks/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import AppBreadcrumb from "@/app/components/ui/AppBreadCrumb";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +11,7 @@ import { CalendarEvent, EventType } from '@/types/calendar';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from "@/app/context/ToastContext";
+
 
 function getTaskProgress(task: CalendarEvent): number {
     const estimate = task.taskEstimate;
@@ -110,9 +111,9 @@ export default function TasksPage() {
     const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
     const [selectedTask, setSelectedTask] = useState<CalendarEvent | null>(null);
     const [activeTab, setActiveTab] = useState<"current" | "past" | "overdue">('current');
-    
-
     const [isCreating, setIsCreating] = useState(false);
+
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const handleTaskToggle = (taskId: string, checked: boolean) => {
         if (checked) {
@@ -135,9 +136,7 @@ export default function TasksPage() {
         }
     };
 
-
     useEffect(() => {
- 
         if (isCreating) return;
 
         const updatedTask = selectedTask ? taskEvents.find(t => t.id === selectedTask.id) : null;
@@ -145,14 +144,12 @@ export default function TasksPage() {
         if (updatedTask) {
             setSelectedTask(updatedTask);
         } else if (taskEvents.length > 0 && !selectedTask) {
-
             const firstActiveTask = taskEvents.find(t => getTaskStatus(t) === activeTab);
             setSelectedTask(firstActiveTask || null);
         } else if (taskEvents.length === 0) {
             setSelectedTask(null);
         }
     }, [taskEvents, activeTab, isCreating]);
-
 
     const sortedTasks = taskEvents.sort((a, b) => a.start!.getTime() - b.start!.getTime());
     
@@ -174,7 +171,6 @@ export default function TasksPage() {
         acc.set(dateKey, group);
         return acc;
     }, new Map<string, CalendarEvent[]>());
-
 
     const handleUpdateField = (field: keyof CalendarEvent, value: any) => {
         if (!selectedTask) return;
@@ -206,21 +202,25 @@ export default function TasksPage() {
     const handleProgressChange = (newProgress: number) => {
         if (!selectedTask) return;
         const completed = newProgress === 100;
+        
         const updatedTask = { ...selectedTask, taskEstimate: `${newProgress}%`, completed: completed };
-        
-        setSelectedTask(updatedTask); 
-        
+        setSelectedTask(updatedTask);
+
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+
         if (!isCreating) {
-            updateTask(updatedTask);
+            saveTimeoutRef.current = setTimeout(() => {
+                updateTask(updatedTask);
+            }, 500); 
         }
     };
 
     const handleSelectTask = (task: CalendarEvent) => {
-
         if (isCreating) {
             setIsCreating(false);
         }
-        
         const globalTask = taskEvents.find(t => t.id === task.id);
         if (globalTask) {
             setSelectedTask(globalTask);
@@ -231,7 +231,6 @@ export default function TasksPage() {
     
     const handleAddTask = () => {
         const now = new Date();
-
         now.setHours(now.getHours() + 1, 0, 0, 0);
 
         const newTask: CalendarEvent = {
@@ -263,13 +262,18 @@ export default function TasksPage() {
         addTask(selectedTask); 
         setIsCreating(false);
         setActiveTab('current');
-        showToast("Success", "Task created successfully.", "success");
     };
 
     const handleCancelCreate = () => {
         setIsCreating(false);
         setSelectedTask(null);
     };
+
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        };
+    }, []);
 
     return (
         <div
@@ -311,7 +315,6 @@ export default function TasksPage() {
                     </div>
 
                     <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-                        
                         {orderedGroupKeys.map(dateKey => {
                             const tasksForDay = groupedTasksMap.get(dateKey) || [];
                             if (tasksForDay.length === 0) return null;
@@ -492,7 +495,6 @@ export default function TasksPage() {
                         </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-60">
-                            <img src="/icons/schedule.png" alt="No Task" className="w-16 h-16 mb-4 grayscale opacity-50" />
                             <p className="text-xl font-semibold text-[var(--color-text-primary)]">
                                 No task selected
                             </p>

@@ -1,3 +1,4 @@
+// app/(authenticated)/student/schedule/page.tsx
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -53,11 +54,11 @@ export default function SchedulePage() {
             }
         }
 
-        if (localEventToEdit && event.id === localEventToEdit.id) {
+        if (localEventToEdit) {
             addSubject(event);
             showToast("Success", "Subject added successfully.", "success");
         } else {
-            updateSubject(event); 
+            updateSubject(event);
             showToast("Success", "Subject updated.", "success");
         }
         

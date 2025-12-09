@@ -1,3 +1,4 @@
+// app/(authenticated)/instructor/classes/page.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -21,6 +22,7 @@ import CreateClassModal from "../dashboard/components/CreateClassModal";
 import EditClassModal from "./components/EditClassModal";
 import ViewStudentsModal from "./components/ViewStudentsModal";
 import SuggestTimeModal from "./components/SuggestTimeModal";
+import ProposalManager from "./components/ProposalManager"; 
 import { useToast } from "@/app/context/ToastContext";
 import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
 import { useSubjects } from "@/app/(authenticated)/student/subjects/SubjectContext";
@@ -41,24 +43,30 @@ interface ClassItem {
   status: "Active" | "Conflict" | "Archived"; 
   description?: string;
   color?: string;
+  conflictingStudents: number;
 }
 
 const DAYS_MAP = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const getBadgeStyle = (type: string) => {
-  switch (type) {
-    case 'Lecture':
-      return { backgroundColor: '#DBEAFE', color: '#1E40AF', border: '1px solid #BFDBFE' }; 
-    case 'Lab':
-      return { backgroundColor: '#F3E8FF', color: '#6B21A8', border: '1px solid #E9D5FF' }; 
-    case 'Active':
-      return { backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0' }; 
-    case 'Conflict':
-      return { backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA' }; 
-    case 'Archived':
-      return { backgroundColor: '#F3F4F6', color: '#374151', border: '1px solid #E5E7EB' }; 
-    default:
-      return { backgroundColor: '#F3F4F6', color: '#374151', border: 'none' };
+const getBadgeStyle = (type: string, isDark: boolean = false) => {
+  if (isDark) {
+      switch (type) {
+        case 'Lecture': return { backgroundColor: 'rgba(59, 130, 246, 0.3)', color: '#93C5FD', border: '1px solid transparent' }; 
+        case 'Lab': return { backgroundColor: 'rgba(192, 132, 252, 0.3)', color: '#D8B4FE', border: '1px solid transparent' }; 
+        case 'Active': return { backgroundColor: 'rgba(20, 83, 45, 0.3)', color: '#4ade80', border: '1px solid transparent' }; 
+        case 'Conflict': return { backgroundColor: 'rgba(127, 29, 29, 0.3)', color: '#f87171', border: '1px solid transparent' }; 
+        case 'Archived': return { backgroundColor: 'rgba(55, 65, 81, 0.3)', color: '#9CA3AF', border: '1px solid transparent' }; 
+        default: return { backgroundColor: '#374151', color: '#9CA3AF' };
+      }
+  } else {
+      switch (type) {
+        case 'Lecture': return { backgroundColor: '#DBEAFE', color: '#1E40AF', border: '1px solid #BFDBFE' }; 
+        case 'Lab': return { backgroundColor: '#F3E8FF', color: '#6B21A8', border: '1px solid #E9D5FF' }; 
+        case 'Active': return { backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0' }; 
+        case 'Conflict': return { backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA' }; 
+        case 'Archived': return { backgroundColor: '#F3F4F6', color: '#374151', border: '1px solid #E5E7EB' }; 
+        default: return { backgroundColor: '#F3F4F6', color: '#374151', border: 'none' };
+      }
   }
 };
 
@@ -100,25 +108,37 @@ export default function InstructorClassesPage() {
 
         const safeClasses = classesData || [];
         const classIds = safeClasses.map(c => c.id);
-        let enrollmentCounts: Record<string, number> = {};
         
+        let enrollmentDetails: Record<string, { count: number, conflicts: number }> = {};
+        let totalStudentsCount = 0;
+        let totalConflictCount = 0; 
+
         if (classIds.length > 0) {
             const { data: enrollments } = await supabase
                 .from('enrollments')
-                .select('class_id')
+                .select('class_id, conflict_report')
                 .in('class_id', classIds)
                 .eq('status', 'approved');
             
             enrollments?.forEach(e => {
-                enrollmentCounts[e.class_id] = (enrollmentCounts[e.class_id] || 0) + 1;
+                const classId = e.class_id;
+                const hasConflict = e.conflict_report && Array.isArray(e.conflict_report) && e.conflict_report.length > 0;
+                
+                enrollmentDetails[classId] = enrollmentDetails[classId] || { count: 0, conflicts: 0 };
+                enrollmentDetails[classId].count++;
+                if (hasConflict) {
+                    enrollmentDetails[classId].conflicts++;
+                    totalConflictCount++; 
+                }
             });
         }
 
         const items: ClassItem[] = [];
-        let totalStudentsCount = 0;
-
+        
         for (const cls of safeClasses) {
-            const enrolledCount = enrollmentCounts[cls.id] || 0;
+            const classEnrollmentStats = enrollmentDetails[cls.id] || { count: 0, conflicts: 0 };
+            const enrolledCount = classEnrollmentStats.count;
+            
             totalStudentsCount += enrolledCount;
 
             let scheduleStr = "Schedule TBD";
@@ -142,9 +162,10 @@ export default function InstructorClassesPage() {
                 enrolled: enrolledCount,
                 capacity: 50, 
                 type: (cls.class_type === 'Lab' ? 'Lab' : 'Lecture'), 
-                status: (cls.status as any) || "Active", 
+                status: classEnrollmentStats.conflicts > 0 ? "Conflict" : (cls.status as any) || "Active", 
                 description: cls.description,
-                color: cls.color
+                color: cls.color,
+                conflictingStudents: classEnrollmentStats.conflicts
             });
         }
 
@@ -152,7 +173,7 @@ export default function InstructorClassesPage() {
         setStats({
             totalClasses: items.length,
             totalStudents: totalStudentsCount,
-            conflicts: 0 
+            conflicts: totalConflictCount
         });
 
     } catch (error: any) {
@@ -256,6 +277,8 @@ export default function InstructorClassesPage() {
     }
     return variant === 'primary' ? '#111827' : '#6B7280'; 
   };
+  
+  const isDark = theme === 'dark';
 
   return (
     <div className="min-h-screen py-6 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--color-main-bg)" }}>
@@ -270,6 +293,7 @@ export default function InstructorClassesPage() {
           <Plus size={18} /> Add New Class
         </Button>
       </div>
+      <ProposalManager />
 
       <div 
         className="p-4 rounded-xl shadow-sm border border-[var(--color-border)] mb-6 flex flex-col sm:flex-row gap-4"
@@ -355,14 +379,19 @@ export default function InstructorClassesPage() {
                                 </div>
                             </TableCell>
                             <TableCell>
-                                <Badge style={getBadgeStyle(cls.type)}>
+                                <Badge style={getBadgeStyle(cls.type, isDark)}>
                                     {cls.type}
                                 </Badge>
                             </TableCell>
                             <TableCell>
-                                <Badge style={getBadgeStyle(cls.status)}>
+                                <Badge style={getBadgeStyle(cls.status, isDark)}>
                                     {cls.status}
                                 </Badge>
+                                {cls.conflictingStudents > 0 && (
+                                    <p className="text-xs text-red-500 dark:text-red-400 font-medium mt-1" title={`${cls.conflictingStudents} approved student(s) have conflicts.`}>
+                                        ({cls.conflictingStudents} Student{cls.conflictingStudents > 1 ? 's' : ''})
+                                    </p>
+                                )}
                             </TableCell>
                             <TableCell className="text-right pr-6">
                                 <DropdownMenu>
@@ -464,7 +493,7 @@ export default function InstructorClassesPage() {
             <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center text-red-600"><AlertCircle size={24} /></div>
             <div>
                 <h3 className="text-2xl font-bold" style={{ color: getTextColor('primary') }}>{stats.conflicts}</h3>
-                <p className="text-sm" style={{ color: getTextColor('secondary') }}>Conflicts</p>
+                <p className="text-sm" style={{ color: getTextColor('secondary') }}>Student Conflicts</p>
             </div>
         </div>
       </div>
