@@ -1,3 +1,4 @@
+// app/(unauthenticated)/(auth)/login/page.tsx
 'use client'
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/Card";
@@ -9,7 +10,7 @@ import { useActionState, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/app/context/ToastContext'
 import { login, signInWithGoogle } from '../actions'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 
 const LoginPage = () => { 
   const router = useRouter()
@@ -90,12 +91,18 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="w-full flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden bg-white">
-      <section className="hidden md:flex md:flex-1">
-        <Card className="w-full h-full rounded-l-2xl shadow-none border-none overflow-hidden relative">
+    <div className="w-full flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden bg-white min-h-[500px] md:h-auto">
+      {/* Left Section - Hidden on Mobile */}
+      <section className="hidden md:flex md:flex-1 relative bg-blue-600">
+        <Card className="w-full h-full rounded-none md:rounded-l-2xl shadow-none border-none overflow-hidden relative bg-transparent">
           <div className="absolute inset-0" style={{ background: "linear-gradient(-139deg, #345AD3 0%, #4169E1 35%, #5B91F5 65%, #9FC3FF 100%)" }} />
-          <div className="absolute -bottom-9 left-0 right-0 bg-cover bg-bottom bg-no-repeat md:h-[40%] lg:h-[70%]" style={{ backgroundImage: "url('/auth-bg1.png')" }} />
-          <CardContent className="relative z-10 flex flex-col items-center text-white text-center h-full p-8 pt-12">
+          
+          <div 
+            className="absolute bottom-0 left-0 right-0 bg-contain bg-bottom bg-no-repeat h-[50%] lg:h-[60%] w-full" 
+            style={{ backgroundImage: "url('/auth-bg1.png')" }} 
+          />
+          
+          <CardContent className="relative z-10 flex flex-col items-center text-white text-center h-full p-8 pt-12 justify-center md:justify-start">
             <div className="max-w-xs mt-4 flex flex-col items-center gap-3">
               <div className="flex items-center gap-3">
                 <img src="/icons/schedule.png" alt="Schedule Icon" className="w-10 h-10 object-contain" />
@@ -109,15 +116,34 @@ const LoginPage = () => {
         </Card>
       </section>
 
-      <section className="flex-1">
-        <Card className="w-full h-full rounded-none md:rounded-r-2xl md:rounded-l-none shadow-none border-0 lg:px-14 px-10">
-          <CardHeader className="flex flex-col items-center gap-2 text-center pt-8">
+      {/* Right Section - Login Form */}
+      <section className="flex-1 flex flex-col">
+        <Card className="w-full h-full rounded-none md:rounded-r-2xl shadow-none border-0 px-6 sm:px-10 lg:px-14 py-8">
+          
+          {/* Back Button */}
+          <div className="w-full flex justify-start mb-4">
+            <Link href="/" className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--color-primary)] transition-colors">
+              <ArrowLeft size={18} />
+              Back
+            </Link>
+          </div>
+
+          {/* Mobile Branding - Visible only on small screens */}
+          <div className="md:hidden flex flex-col items-center gap-2 mb-6">
+            <div className="flex items-center gap-2">
+              <img src="/icons/schedule.png" alt="Logo" className="w-8 h-8" />
+              <span className="text-xl font-bold text-primary">SchedEuler</span>
+            </div>
+          </div>
+
+          <CardHeader className="flex flex-col items-center gap-2 text-center p-0 mb-6">
             <CardTitle className="text-2xl font-bold">Login</CardTitle>
             <CardDescription>Enter your email below to login to your account</CardDescription>
           </CardHeader>
-          <CardContent className="pt-6">
+          
+          <CardContent className="p-0">
             <form action={handleFormSubmit}>
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-5">
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" name="email" type="email" placeholder="m@example.com" required defaultValue={savedEmail} />
@@ -144,7 +170,7 @@ const LoginPage = () => {
                 )}
               </div>
               
-              <CardFooter className="flex flex-col gap-4 pb-8 px-0 mt-3">
+              <CardFooter className="flex flex-col gap-4 p-0 mt-6">
                 <Button type="submit" className="w-full">Login</Button>
                 <div className="flex items-center w-full">
                   <div className="flex-grow h-px bg-gray-300"></div>
