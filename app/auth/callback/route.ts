@@ -9,12 +9,15 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies()
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() { return cookieStore.getAll() },
+          getAll() {
+            return cookieStore.getAll()
+          },
           setAll(cookiesToSet) {
             try {
               cookiesToSet.forEach(({ name, value, options }) =>
@@ -31,12 +34,12 @@ export async function GET(request: Request) {
     const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (error) {
-      console.error('Auth callback error:', error)
+      console.error('Auth Code Exchange Error:', error.message)
       return NextResponse.redirect(new URL('/login?error=auth_failed', request.url))
     }
 
     if (user) {
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: profileError } = await supabase
         .from('profiles')
         .select('id, account_type')
         .eq('id', user.id)
@@ -48,25 +51,47 @@ export async function GET(request: Request) {
         const role = existingProfile.account_type;
         
         if (user.user_metadata?.account_type !== role) {
-            const { error: adminError } = await supabase.auth.admin.updateUserById(user.id, {
-                user_metadata: { 
-                    ...user.user_metadata,
-                    account_type: role
+            const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+
+            if (serviceRoleKey) {
+                try {
+                    const adminSupabase = createServerClient(
+                        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                        serviceRoleKey,
+                        { 
+                            cookies: { 
+                                getAll: () => cookieStore.getAll(), 
+                                setAll: () => {} 
+                            } 
+                        }
+                    );
+                    
+                    const { error: adminError } = await adminSupabase.auth.admin.updateUserById(user.id, {
+                        user_metadata: { 
+                            ...user.user_metadata,
+                            account_type: role
+                        }
+                    });
+                    
+                    if (adminError) {
+                        console.error("Admin metadata update failed:", adminError.message);
+                    }
+                } catch (err) {
+                    console.error("Admin client creation failed:", err);
                 }
-            });
-            
-            if (adminError) {
-                console.error("Admin update failed:", adminError);
+            } else {
+                console.warn("Missing SUPABASE_SERVICE_ROLE_KEY. Skipping metadata sync.");
             }
         }
         
         const dest = role === 'instructor' 
           ? '/instructor/dashboard' 
           : '/student/dashboard';
+          
         return NextResponse.redirect(new URL(`${dest}?toast=login`, request.url))
       }
     }
   }
 
-  return NextResponse.redirect(new URL('/login?error=auth_failed', request.url))
+  return NextResponse.redirect(new URL('/login?error=no_code', request.url))
 }
