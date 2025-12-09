@@ -6,6 +6,7 @@ import { useSmoothScroll } from "@/hooks/useSmoothScroll";
 import { NavLink, SectionProps } from "@/types/sections";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+
 const NAV_LINKS: NavLink[] = [
   { href: "#features", label: "Features" },
   { href: "#how-it-works", label: "How It Works" },
@@ -19,20 +20,22 @@ const LandingHeader = ({ className }: SectionProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollToElement } = useSmoothScroll();
   const router = useRouter();
+
   const handleLoginClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     router.push("/login");
   };
+  
   const handleSignupClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     router.push("/signup");
   };
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -72,10 +75,18 @@ const LandingHeader = ({ className }: SectionProps) => {
 
   const renderAuthButtons = () => (
     <div className="hidden md:flex gap-2">
-      <Button variant="outline" onClick={handleLoginClick} className="hidden lg:block rounded-2xl hover:scale-110">
+      <Button 
+        variant="outline" 
+        onClick={handleLoginClick} 
+        className="rounded-2xl hover:scale-110"
+      >
         Login
       </Button>
-      <Button onClick={handleSignupClick} className="rounded-2xl hover:scale-110">
+      
+      <Button 
+        onClick={handleSignupClick} 
+        className="hidden lg:block rounded-2xl hover:scale-110"
+      >
         Sign Up
       </Button>
     </div>
@@ -85,6 +96,14 @@ const LandingHeader = ({ className }: SectionProps) => {
     <div className="md:hidden absolute top-full right-4 mt-2 bg-background/95 backdrop-blur-lg shadow-lg z-40 rounded-xl overflow-hidden min-w-[200px]">
       <nav className="p-4">
         {renderNavLinks(NAV_LINKS, true)}
+        <div className="mt-4 flex flex-col gap-2 pt-4 border-t border-border">
+            <Button variant="outline" onClick={handleLoginClick} className="w-full rounded-xl">
+                Login
+            </Button>
+            <Button onClick={handleSignupClick} className="w-full rounded-xl">
+                Sign Up
+            </Button>
+        </div>
       </nav>
     </div>
   );
@@ -145,7 +164,6 @@ const LandingHeader = ({ className }: SectionProps) => {
       </nav>
 
       {renderHamburgerButton()}
-
 
       {menuOpen && renderMobileMenu()}
 

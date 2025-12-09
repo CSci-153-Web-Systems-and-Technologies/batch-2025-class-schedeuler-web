@@ -1,3 +1,6 @@
+// app/(unauthenticated)/landing/components/BenefitSection.tsx
+"use client";
+
 import { Card, CardContent } from "@/app/components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/components/ui/Table";
 import { SectionProps } from "@/types/sections";
@@ -29,15 +32,17 @@ const COMPARISON_DATA: Comparison[] = [
 
 const BenefitSection = ({ id, className }: SectionProps) => {
   const renderBenefitsList = () => (
-    <Card className="p-6 h-full shadow-[0_32px_64px_0_rgba(65,105,225,0.12),_0_8px_24px_0_rgba(65,105,225,0.0784)]">
+    <Card className="p-5 sm:p-6 h-full shadow-[0_32px_64px_0_rgba(65,105,225,0.12),_0_8px_24px_0_rgba(65,105,225,0.0784)]">
       <CardContent className="p-0">
-        <ul className="flex flex-col gap-4">
+        <ul className="flex flex-col gap-4 sm:gap-5">
           {BENEFITS.map((benefit, index) => (
-            <li key={index} className="flex items-start gap-2">
-              <strong className="text-lg flex-shrink-0 text-foreground">
-                {benefit.feature} —
+            <li key={index} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+              <strong className="text-base sm:text-lg text-foreground shrink-0 font-bold">
+                {benefit.feature} <span className="hidden sm:inline">—</span>
               </strong>
-              <span className="text-foreground/80">{benefit.description}</span>
+              <span className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                {benefit.description}
+              </span>
             </li>
           ))}
         </ul>
@@ -46,40 +51,40 @@ const BenefitSection = ({ id, className }: SectionProps) => {
   );
 
   const renderComparisonTable = () => (
-    <div className="w-full overflow-x-auto rounded-2xl bg-white p-4 shadow-[0_32px_64px_0_rgba(65,105,225,0.12),_0_8px_24px_0_rgba(65,105,225,0.0784)] h-full flex flex-col justify-between">
-      <div className="inline-block min-w-full align-middle">
-        <Table className="min-w-full border-collapse text-sm md:text-base">
+    <div className="w-full overflow-hidden rounded-2xl bg-white p-3 sm:p-4 shadow-[0_32px_64px_0_rgba(65,105,225,0.12),_0_8px_24px_0_rgba(65,105,225,0.0784)] h-full flex flex-col justify-between border border-border/50">
+      <div className="inline-block min-w-full align-middle overflow-x-auto">
+        <Table className="min-w-full border-collapse text-xs sm:text-sm md:text-base">
           <TableHeader>
-            <TableRow className="bg-gradient-to-r from-[#4169e1] to-[#6a5acd] ">
-              <TableHead className="py-3 px-4 text-left font-bold text-white rounded-tl-2xl rounded-bl-2xl">
+            <TableRow className="bg-gradient-to-r from-[#4169e1] to-[#6a5acd] border-none hover:bg-transparent">
+              <TableHead className="py-2.5 px-3 md:py-3 md:px-4 text-left font-bold text-white first:rounded-tl-xl md:first:rounded-tl-2xl first:rounded-bl-xl md:first:rounded-bl-2xl w-[40%]">
                 Feature
               </TableHead>
-              <TableHead className="py-3 px-4 text-center font-bold text-white">
+              <TableHead className="py-2.5 px-2 md:py-3 md:px-4 text-center font-bold text-white w-[30%]">
                 SchedEuler
               </TableHead> 
-              <TableHead className="py-3 px-4 text-center font-bold text-white rounded-tr-2xl rounded-br-2xl">
+              <TableHead className="py-2.5 px-2 md:py-3 md:px-4 text-center font-bold text-white last:rounded-tr-xl md:last:rounded-tr-2xl last:rounded-br-xl md:last:rounded-br-2xl w-[30%]">
                 Others
               </TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className="text-black bg-white">
+          <TableBody className="text-foreground bg-white">
             {COMPARISON_DATA.map((row, index) => (
-              <TableRow key={index}>
-                <TableCell className="py-3 px-4 font-medium">
+              <TableRow key={index} className="border-b border-gray-100 last:border-0 hover:bg-muted/5">
+                <TableCell className="py-3 px-3 md:py-4 md:px-4 font-medium align-middle">
                   {row.feature}
                 </TableCell>
-                <TableCell className="py-3 px-4 text-center">
-                  <span className="text-green-600 text-xl font-bold">
+                <TableCell className="py-3 px-2 md:py-4 md:px-4 text-center align-middle">
+                  <span className="text-green-600 text-lg md:text-xl font-bold">
                     {row.schedEuler}
                   </span>
                 </TableCell>
                 <TableCell className={cn(
-                  "py-3 px-4 text-center",
-                  row.others === "✕" ? "text-red-500" : "text-foreground"
+                  "py-3 px-2 md:py-4 md:px-4 text-center align-middle",
+                  row.others === "✕" ? "text-red-500" : "text-muted-foreground"
                 )}>
                   <span className={cn(
                     "font-bold",
-                    row.others === "✕" ? "text-xl" : "text-base"
+                    row.others === "✕" ? "text-lg md:text-xl" : "text-xs md:text-sm font-medium"
                   )}>
                     {row.others}
                   </span>
@@ -93,10 +98,12 @@ const BenefitSection = ({ id, className }: SectionProps) => {
   );
 
   return (
-    <section id={id} className={cn("flex flex-col gap-6 mb-8", className)}>
-      <h2 className="text-2xl font-bold">Why Choose SchedEuler?</h2>
+    <section id={id} className={cn("flex flex-col gap-8 md:gap-10 mb-12 md:mb-20", className)}>
+      <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold lg:text-left text-foreground">
+        Why Choose SchedEuler?
+      </h2>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
         {renderBenefitsList()}
         {renderComparisonTable()}
       </div>

@@ -310,3 +310,18 @@ select option[value=""][disabled] {
     margin: 0 !important;
   }
 }
+
+@layer utilities {
+  @keyframes breathe {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.03); 
+    }
+  }
+
+  .animate-breathe {
+    animation: breathe 3s ease-in-out infinite;
+  }
+}
