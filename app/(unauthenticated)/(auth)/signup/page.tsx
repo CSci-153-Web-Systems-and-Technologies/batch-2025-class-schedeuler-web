@@ -92,8 +92,7 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="w-full flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden bg-white min-h-[600px] max-w-6xl mx-auto">
-      {/* Left Section - Hidden on mobile, visible on medium+ screens */}
+    <div className="w-full flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden bg-white max-w-6xl mx-auto">
       <section className="hidden md:flex md:flex-1 relative bg-blue-600">
         <Card className="w-full h-full rounded-none md:rounded-l-2xl shadow-none border-none overflow-hidden relative bg-transparent">
           <div className="absolute inset-0" style={{ background: "linear-gradient(-139deg, #345AD3 0%, #4169E1 35%, #5B91F5 65%, #9FC3FF 100%)" }} />
@@ -117,19 +116,16 @@ const SignupPage = () => {
         </Card>
       </section>
 
-      {/* Right Section - Signup Form */}
-      <section className="flex-1 flex flex-col">
-        <Card className="w-full h-full rounded-none md:rounded-r-2xl shadow-none border-0 px-6 sm:px-10 lg:px-12 py-8 overflow-y-auto">
+      <section className="flex-1 flex flex-col relative">
+        <Card className="w-full h-full rounded-none md:rounded-r-2xl shadow-none border-0 px-6 sm:px-8 lg:px-12 pt-12 pb-6 flex flex-col justify-center">
           
-          {/* Back Button */}
-          <div className="w-full flex justify-start mb-4">
-            <Link href="/" className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--color-primary)] transition-colors">
+          <div className="absolute top-4 left-4 z-10">
+            <Link href="/" className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--color-primary)] transition-colors p-2">
               <ArrowLeft size={18} />
-              Back
+              <span className="hidden sm:inline">Back</span>
             </Link>
           </div>
 
-          {/* Mobile Branding */}
           <div className="md:hidden flex flex-col items-center gap-2 mb-4">
             <div className="flex items-center gap-2">
               <img src="/icons/schedule.png" alt="Logo" className="w-8 h-8" />
@@ -137,45 +133,42 @@ const SignupPage = () => {
             </div>
           </div>
 
-          <CardHeader className="flex flex-col items-center gap-1 text-center p-0 mb-6">
+          <CardHeader className="flex flex-col items-center gap-1 text-center p-0 mb-4">
             <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
             <CardDescription>Join now to schedule with ease!</CardDescription>
           </CardHeader>
           
           <CardContent className="p-0">
             <form action={handleSubmit}>
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 
-                {/* Name & Email Row on Desktop */}
-                <div className="flex flex-col lg:flex-row gap-4">
-                  <div className="grid gap-2 flex-1">
+                <div className="flex flex-col md:flex-row gap-3">
+                  <div className="grid gap-1.5 flex-1">
                     <Label htmlFor="name">Name</Label>
                     <Input id="name" name="name" type="text" placeholder="Enter your full name" required />
                   </div>
-                  <div className="grid gap-2 flex-1">
+                  <div className="grid gap-1.5 flex-1">
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" name="email" type="email" placeholder="m@example.com" required value={email} onChange={handleEmailChange} />
                   </div>
                 </div>
                 
-                {/* Warning for Google Email */}
                 {isGoogleEmail(email) && (
-                    <div className="text-amber-600 text-xs -mt-2">💡 Gmail detected - we recommend using Google Sign Up below</div>
+                    <div className="text-amber-600 text-xs -mt-1">💡 Gmail detected - we recommend using Google Sign Up below</div>
                 )}
 
-                {/* Password Row */}
-                <div className="flex flex-col lg:flex-row gap-4">
-                  <div className="grid gap-2 flex-1">
+                <div className="flex flex-col md:flex-row gap-3">
+                  <div className="grid gap-1.5 flex-1">
                     <Label htmlFor="password">Password</Label>
                     <Input id="password" name="password" type="password" placeholder="Create a password" required />
                   </div>
-                  <div className="grid gap-2 flex-1">
+                  <div className="grid gap-1.5 flex-1">
                     <Label htmlFor="confirm-pass">Confirm Password</Label>
                     <Input id="confirm-pass" name="confirm-password" type="password" placeholder="Confirm your password" required />
                   </div>
                 </div>
 
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                   <Label htmlFor="acc-type">Account Type</Label>
                   <Select name="acc-type" required>
                     <SelectTrigger className="w-full">
@@ -191,7 +184,7 @@ const SignupPage = () => {
                   </Select>
                 </div>
                 
-                <div className="flex gap-2 items-start mt-2">
+                <div className="flex gap-2 items-start mt-1">
                   <Checkbox 
                     id="terms" 
                     name="terms" 
@@ -221,7 +214,7 @@ const SignupPage = () => {
                 {googleError && <div className="text-red-500 text-sm mt-1">{googleError}</div>}
               </div>
               
-              <CardFooter className="flex flex-col gap-4 p-0 mt-6">
+              <CardFooter className="flex flex-col gap-3 p-0 mt-5">
                 <Button 
                     type="submit" 
                     className="w-full transition-opacity" 
