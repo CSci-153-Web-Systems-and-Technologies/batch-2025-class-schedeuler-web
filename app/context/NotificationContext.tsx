@@ -52,18 +52,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [supabase]);
 
-  // Initial Fetch
   useEffect(() => {
     fetchNotifications();
 
-    // Optional: Real-time subscription
     const channel = supabase
       .channel('public:notifications')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, 
         (payload) => {
           const newNotif = payload.new as Notification;
           setNotifications(prev => [newNotif, ...prev]);
-          // Show a toast when a new notification arrives
           showToast(newNotif.title, newNotif.message, newNotif.type);
       })
       .subscribe();
@@ -74,7 +71,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [fetchNotifications, supabase, showToast]);
 
   const markAsRead = async (id: string) => {
-    // Optimistic update
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
     
     await supabase.from("notifications").update({ is_read: true }).eq("id", id);
