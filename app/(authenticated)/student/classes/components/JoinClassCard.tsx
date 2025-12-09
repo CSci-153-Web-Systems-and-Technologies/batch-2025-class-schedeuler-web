@@ -24,7 +24,6 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
   const { theme } = useThemeContext();
   const { subjects: currentSchedule, deleteSubject } = useSubjects();
 
-  // Helper to generate the privacy-preserving conflict summary
   const generateConflictReport = (conflicts: CalendarEvent[]): string[] => {
     if (!conflicts || conflicts.length === 0) return [];
     return conflicts.map(c => 
@@ -32,11 +31,23 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
     );
   };
 
-  /**
-   * Executes the class enrollment, optionally deleting a conflicting manual event first.
-   */
-  const executeJoin = async (classId: string, className: string, eventIdToDelete: string | null = null, finalConflicts: CalendarEvent[] = []) => {
-    // [FIX] Safety check to prevent undefined ID errors
+  const fetchCurrentUserName = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('id', userId)
+      .single();
+    return profile?.name || 'A Student';
+  };
+
+  const executeJoin = async (
+    classId: string, 
+    className: string, 
+    instructorId: string,
+    studentName: string,
+    eventIdToDelete: string | null = null, 
+    finalConflicts: CalendarEvent[] = []
+  ) => {
     if (!classId) {
         showToast('Error', 'Missing class information. Please try searching again.', 'error');
         return;
@@ -49,22 +60,19 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         
-        // 1. Execute replacement/deletion logic first
         if (eventIdToDelete) {
             await deleteSubject(eventIdToDelete); 
         }
 
-        // 2. Prepare the report for the instructor
         const conflictReport = generateConflictReport(finalConflicts);
 
-        // 3. Execute Join (Enrollment)
         const { error: enrollError } = await supabase
             .from('enrollments')
             .insert([{
                 student_id: user.id,
                 class_id: classId,
                 status: 'pending',
-                conflict_report: conflictReport // Requires 'conflict_report' column in DB
+                conflict_report: conflictReport
             }]);
 
         if (enrollError) {
@@ -72,13 +80,19 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
             
             if (enrollError.code === '23505') { 
                 showToast('Info', 'You have already requested to join this class.', 'info');
-            } else if (enrollError.code === '42703') { // Postgres code for "undefined column"
-                showToast('Database Error', "Missing 'conflict_report' column. Please run the migration.", 'error');
             } else {
-                // [FIX] Show actual error message for better debugging
                 showToast('Error', `Failed to join: ${enrollError.message}`, 'error');
             }
         } else {
+            await supabase.from('notifications').insert({
+                user_id: instructorId,
+                title: 'New Enrollment Request',
+                message: `${studentName} requested to join "${className}". Review on the My Classes page.`,
+                type: 'info',
+                link: '/instructor/classes',
+                is_read: false
+            });
+
             showToast('Success', `Request sent to join "${className}"`, 'success');
             setClassCode(''); 
             if (onJoinSuccess) onJoinSuccess(); 
@@ -92,15 +106,14 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
     }
   };
 
-  /**
-   * Handler for the "Replace & Join" button click.
-   */
   const handleReplaceAndJoin = async () => {
     if (!pendingClassData || !pendingClassData.manualConflictId) return;
     
     await executeJoin(
         pendingClassData.id, 
         pendingClassData.name, 
+        pendingClassData.instructor_id,
+        pendingClassData.student_name,
         pendingClassData.manualConflictId,
         detectedConflicts
     );
@@ -118,7 +131,7 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
     try {
       const { data: classData, error: classError } = await supabase
         .from('classes')
-        .select('id, name, start_time, end_time, repeat_days')
+        .select('id, name, instructor_id, start_time, end_time, repeat_days')
         .eq('code', classCode.trim())
         .single();
 
@@ -130,6 +143,8 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      const studentName = await fetchCurrentUserName(user.id);
 
       const { data: existing } = await supabase
         .from('enrollments')
@@ -171,19 +186,26 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
       const conflicts = getConflictingEvents(tentativeEvent, currentSchedule);
 
       if (conflicts.length > 0) {
-        // Only a non-official SUBJECT entry is considered replaceable.
         const manualConflict = conflicts.find(c => c.type === EventType.SUBJECT && !c.id.startsWith('class_'));
         
         setPendingClassData({
             ...classData,
             manualConflictId: manualConflict ? manualConflict.id : null,
+            instructor_id: classData.instructor_id, 
+            student_name: studentName,
         });
         setDetectedConflicts(conflicts);
         setIsConflictModalOpen(true);
         setLoading(false); 
       } else {
-        // No conflicts, pass empty array
-        await executeJoin(classData.id, classData.name, null, []);
+        await executeJoin(
+            classData.id, 
+            classData.name, 
+            classData.instructor_id, 
+            studentName,
+            null, 
+            []
+        );
       }
 
     } catch (err) {
@@ -247,8 +269,7 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
       <JoinConflictModal
         isOpen={isConflictModalOpen}
         onClose={() => setIsConflictModalOpen(false)}
-        // Pass detectedConflicts here to ensure they are sent in the payload if 'Join Anyway' is clicked
-        onConfirm={() => executeJoin(pendingClassData?.id, pendingClassData?.name, null, detectedConflicts)} 
+        onConfirm={() => executeJoin(pendingClassData?.id, pendingClassData?.name, pendingClassData?.instructor_id, pendingClassData?.student_name, null, detectedConflicts)} 
         onConfirmReplace={handleReplaceAndJoin}
         newClassName={pendingClassData?.name || 'Class'}
         conflicts={detectedConflicts}
