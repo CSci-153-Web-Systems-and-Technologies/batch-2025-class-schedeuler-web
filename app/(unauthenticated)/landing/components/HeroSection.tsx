@@ -1,10 +1,12 @@
 "use client";
 import Image from "next/image";
+import { useRouter } from "next/navigation"; 
 import { Button } from "@/app/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/Card";
 import { Badge } from "@/app/components/ui/Badge";
 import { SectionProps } from "@/types/sections";
 import { cn } from "@/lib/utils";
+import { useSmoothScroll } from "@/hooks/useSmoothScroll"; 
 
 const STATS = [
   { title: "Real-time", description: "Conflict detection" },
@@ -25,6 +27,13 @@ const QUICK_ACTIONS = [
 ] as const;
 
 const HeroSection = ({ className }: SectionProps) => {
+  const router = useRouter();
+  const { scrollToElement } = useSmoothScroll(); 
+
+  const handleLogin = () => router.push("/login");
+  const handleSignup = () => router.push("/signup");
+  const handleLearnMore = () => scrollToElement("#features");
+
   const renderStats = () => (
     <div className="grid grid-cols-3 gap-4 md:gap-6 text-center md:text-left">
       {STATS.map((stat, index) => (
@@ -92,11 +101,39 @@ const HeroSection = ({ className }: SectionProps) => {
           tasks). Built for students and instructors.
         </p>
 
+        {/* --- BUTTONS SECTION --- */}
         <div className="flex flex-wrap gap-4 mb-8 md:mb-12">
-          <Button size="lg" className="rounded-full hover:scale-105">
+          {/* MOBILE BUTTONS (< md) */}
+          <Button 
+            size="lg" 
+            className="md:hidden rounded-full hover:scale-105 flex-1"
+            onClick={handleLogin}
+          >
+            Login
+          </Button>
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="md:hidden rounded-full hover:scale-105 flex-1"
+            onClick={handleSignup}
+          >
+            Sign Up
+          </Button>
+
+          {/* DESKTOP/TABLET BUTTONS (>= md) */}
+          <Button 
+            size="lg" 
+            className="hidden md:inline-flex rounded-full hover:scale-105"
+            onClick={handleLogin} 
+          >
             Get Started
           </Button>
-          <Button variant="outline" size="lg" className="rounded-full hover:scale-105">
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="hidden md:inline-flex rounded-full hover:scale-105"
+            onClick={handleLearnMore} 
+          >
             Learn More
           </Button>
         </div>
@@ -104,7 +141,7 @@ const HeroSection = ({ className }: SectionProps) => {
         {renderStats()}
       </div>
 
-      <Card className="w-full lg:max-w-lg p-6 shadow-[0_32px_64px_0_rgba(65,105,225,0.12),_0_8px_24px_0_rgba(65,105,225,0.0784)] hover:scale-105 duration-300">
+      <Card className="w-full lg:max-w-lg p-6 shadow-[0_32px_64px_0_rgba(65,105,225,0.12),_0_8px_24px_0_rgba(65,105,225,0.0784)] hover:scale-105 duration-300 animate-breathe">
         <CardHeader className="flex flex-row justify-between items-baseline p-0 mb-4">
           <h2 className="font-bold text-xl md:text-2xl">My Week</h2>
           <p className="text-sm md:text-base text-muted-foreground">Mon-Fri</p>
@@ -116,7 +153,10 @@ const HeroSection = ({ className }: SectionProps) => {
             {renderQuickActions()}
           </div>
           
-          <Button className="w-full rounded-full bg-gradient-to-r from-primary to-[#8274FF]">
+          <Button 
+            className="w-full rounded-full bg-gradient-to-r from-primary to-[#8274FF]"
+            onClick={handleLogin} 
+          >
             Create Schedule
           </Button>
         </CardContent>
