@@ -1,3 +1,4 @@
+// app/(authenticated)/student/components/StudentMobileSidebar.tsx
 "use client";
 
 import { X, Bell, Moon, Sun, User, Settings, LogOut } from "lucide-react";
@@ -5,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar";
 import { logout } from "@/app/(unauthenticated)/(auth)/actions";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/app/context/ToastContext";
+// [NEW] Import the utility function
+import { getInitialsWithoutMiddle } from "@/utils/stringUtils";
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -15,17 +18,7 @@ interface MobileSidebarProps {
   toggleDarkMode?: () => void;
 }
 
-function getInitialsWithoutMiddle(fullName: string): string {
-  const nameParts = fullName.trim().split(/\s+/);
-  if (nameParts.length === 0) return "";
-  
-  let firstNameInitial = nameParts[0].charAt(0).toUpperCase();
-  let lastNameInitial = nameParts.length >= 2 
-    ? nameParts[nameParts.length - 1].charAt(0).toUpperCase()
-    : firstNameInitial;
-
-  return firstNameInitial + lastNameInitial;
-}
+// [REMOVED] Local getInitialsWithoutMiddle function
 
 const mobileMenuItems = [
   { name: "Home", href: "/student/dashboard" },
