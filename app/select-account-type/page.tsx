@@ -1,20 +1,45 @@
-// app/select-account-type/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
 import { Button } from "@/components/ui/Button"
+import { Checkbox } from "@/components/ui/Checkbox"
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from "@/app/context/ToastContext"
+import TermsModal from '@/app/(unauthenticated)/(auth)/signup/components/TermsModal'
 
 export default function SelectAccountType() {
   const [selectedType, setSelectedType] = useState<'student' | 'instructor' | null>(null)
+  
+  // Default to true, but we will control this via useEffect based on origin
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(true)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createClient()
-  const { showToast } = useToast() 
+  const { showToast } = useToast()
+
+  // [NEW] Check if user already accepted terms in Signup page via Google
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const acceptedInSignup = localStorage.getItem('terms_accepted_flow');
+        
+        if (acceptedInSignup === 'true') {
+            // Came from Signup -> Auto-accept and hide modal
+            setTermsAccepted(true);
+            setIsTermsModalOpen(false);
+            // Clean up the flag
+            localStorage.removeItem('terms_accepted_flow');
+        } else {
+            // Came from Login (or direct) -> Show modal
+            setIsTermsModalOpen(true);
+            setTermsAccepted(false);
+        }
+    }
+  }, []);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -26,7 +51,21 @@ export default function SelectAccountType() {
     checkUser()
   }, [router, supabase.auth])
 
+  const handleTermsAccept = () => {
+    setTermsAccepted(true);
+    setIsTermsModalOpen(false);
+    setError('');
+  };
+
   const handleCompleteRegistration = async () => {
+    if (!termsAccepted) {
+      setError('You must accept the Terms and Conditions to continue.')
+      showToast("Required", "Please accept the Terms and Conditions", "error")
+      // Re-open the modal if they try to click continue without accepting
+      setIsTermsModalOpen(true) 
+      return
+    }
+
     if (!selectedType) {
       setError('Please select an account type')
       return
@@ -86,6 +125,7 @@ export default function SelectAccountType() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          
           <div
             className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
               selectedType === 'student' 
@@ -103,7 +143,7 @@ export default function SelectAccountType() {
                 )}
               </div>
               <div>
-                <h3 className="font-semibold">Student</h3>
+                <h3 className="font-semibold text-gray-900">Student</h3>
                 <p className="text-sm text-gray-600">I want to schedule classes and learn</p>
               </div>
             </div>
@@ -126,25 +166,55 @@ export default function SelectAccountType() {
                 )}
               </div>
               <div>
-                <h3 className="font-semibold">Instructor</h3>
+                <h3 className="font-semibold text-gray-900">Instructor</h3>
                 <p className="text-sm text-gray-600">I want to teach and manage classes</p>
               </div>
             </div>
           </div>
 
+          <div className="flex gap-2 items-start pt-2">
+            <Checkbox 
+              id="terms" 
+              checked={termsAccepted}
+              onCheckedChange={(checked) => {
+                setTermsAccepted(checked as boolean)
+                if(checked) setError('')
+              }}
+              className="mt-1"
+            />
+            <div className="flex flex-col gap-1">
+              <div className="text-sm text-gray-600">
+                I agree to the{' '}
+                <button 
+                  type="button" 
+                  onClick={() => setIsTermsModalOpen(true)}
+                  className="text-blue-600 hover:underline font-medium focus:outline-none"
+                >
+                  Terms and Conditions
+                </button>
+              </div>
+            </div>
+          </div>
+
           {error && (
-            <div className="text-red-500 text-sm text-center">{error}</div>
+            <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-md border border-red-100">{error}</div>
           )}
 
           <Button
             onClick={handleCompleteRegistration}
-            disabled={!selectedType || loading}
+            disabled={!selectedType || !termsAccepted || loading}
             className="w-full"
           >
             {loading ? 'Completing Registration...' : 'Complete Registration'}
           </Button>
         </CardContent>
       </Card>
+
+      <TermsModal 
+        isOpen={isTermsModalOpen} 
+        onClose={() => setIsTermsModalOpen(false)} 
+        onAccept={handleTermsAccept}
+      />
     </div>
   )
 }
