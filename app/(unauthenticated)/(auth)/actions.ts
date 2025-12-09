@@ -1,3 +1,4 @@
+// app/(unauthenticated)/(auth)/actions.ts
 'use server'
 
 import { revalidatePath } from 'next/cache'
@@ -36,13 +37,23 @@ export async function login(prevState: any, formData: FormData): Promise<AuthRes
       return { error: 'Error fetching user profile' }
     }
 
+    // [FIX] OPTIMIZATION: Store role in JWT metadata on successful login
+    if (profile?.account_type && authData.user.user_metadata?.account_type !== profile.account_type) {
+        const adminSupabase = await createClient() // Use admin client for this action
+        await adminSupabase.auth.admin.updateUserById(authData.user.id, {
+            user_metadata: { 
+                ...authData.user.user_metadata,
+                account_type: profile.account_type
+            }
+        });
+    }
+
     const url = profile?.account_type === 'instructor' 
       ? '/instructor/dashboard' 
       : '/student/dashboard';
       
     revalidatePath(url, 'layout')
     
-    // Return success + URL to let Client handle the redirect
     return { success: true, redirectUrl: url }
   }
 
@@ -58,7 +69,7 @@ export async function signup(prevState: any, formData: FormData): Promise<AuthRe
     options: {
       data: {
         name: formData.get('name') as string,
-        account_type: formData.get('acc-type') as string,
+        account_type: formData.get('acc-type') as string, 
       }
     }
   }
@@ -111,7 +122,6 @@ export async function logout(): Promise<AuthResponse> {
   return { success: true, redirectUrl: '/landing' }
 }
 
-// Google Auth (Must keep server-side redirect)
 export async function signInWithGoogle() {
   const supabase = await createClient()
   
