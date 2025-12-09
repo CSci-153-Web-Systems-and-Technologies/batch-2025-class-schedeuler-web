@@ -17,6 +17,8 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/app/context/ToastContext";
 import NotificationPopover from "./NotificationPopover";
 import { cn } from "@/lib/utils"; 
+// [NEW] Import the utility function
+import { getInitialsWithoutMiddle } from "@/utils/stringUtils";
 
 interface TopbarProps {
   title?: string;
@@ -29,19 +31,7 @@ interface TopbarProps {
   userRole?: 'student' | 'instructor'; 
 }
 
-function getInitialsWithoutMiddle(fullName: string): string {
-  const nameParts = fullName.trim().split(/\s+/);
-  if (nameParts.length === 0) return "";
-  let firstNameInitial = "";
-  let lastNameInitial = "";
-  if (nameParts.length >= 1) firstNameInitial = nameParts[0].charAt(0).toUpperCase();
-  if (nameParts.length >= 2) {
-    lastNameInitial = nameParts[nameParts.length - 1].charAt(0).toUpperCase();
-  } else if (nameParts.length === 1) {
-    lastNameInitial = firstNameInitial;
-  }
-  return firstNameInitial + lastNameInitial;
-}
+// [REMOVED] Local getInitialsWithoutMiddle function
 
 export default function Topbar({
   title = "Dashboard",
