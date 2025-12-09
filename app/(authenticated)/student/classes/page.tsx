@@ -1,3 +1,4 @@
+// app/(authenticated)/student/classes/page.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -21,6 +22,7 @@ interface ClassData extends EnrolledClassProps {
 export default function StudentClassesPage() {
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,6 +30,8 @@ export default function StudentClassesPage() {
   const supabase = createClient();
 
   const fetchClasses = useCallback(async () => {
+    await new Promise(resolve => setTimeout(resolve, 50)); 
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
@@ -84,6 +88,7 @@ export default function StudentClassesPage() {
         }).filter(item => item !== null) as ClassData[];
         
         setClasses(mappedClasses);
+        setRefreshKey(prev => prev + 1);
       }
     }
     setLoading(false);
@@ -101,7 +106,7 @@ export default function StudentClassesPage() {
       if (!user) return;
 
       channel = supabase
-        .channel('student_classes_realtime')
+        .channel('student_classes_updates')   
         .on(
           'postgres_changes',
           {
@@ -110,8 +115,28 @@ export default function StudentClassesPage() {
             table: 'enrollments',
             filter: `student_id=eq.${user.id}`, 
           },
-          () => fetchClasses()
+          () => {
+            console.log("Enrollment update detected, refreshing...");
+            fetchClasses();
+          }
         )
+        
+        .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${user.id}`,
+            },
+            (payload) => {
+                if (payload.new.title.includes('Enrollment')) {
+                    console.log("Enrollment notification received, triggering class refresh...");
+                    fetchClasses();
+                }
+            }
+        )
+
         .on(
           'postgres_changes',
           {
@@ -194,12 +219,11 @@ export default function StudentClassesPage() {
               <Loader2 className="animate-spin text-[var(--color-primary)]" size={32} />
             </div>
           ) : classes.length > 0 ? (
-            <div className="grid gap-4">
+            <div key={refreshKey} className="grid gap-4">
               {classes.map((cls) => (
                 <EnrolledClassCard 
                     key={cls.id} 
                     {...cls} 
-
                     onClick={() => handleClassClick(cls)}
                 />
               ))}

@@ -1,7 +1,8 @@
+// app/(authenticated)/instructor/classes/components/ViewStudentsModal.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { X, Loader2, User, Check, Ban } from 'lucide-react';
+import { X, Loader2, User, Check, Ban, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/Avatar";
 import { Badge } from "@/app/components/ui/Badge";
@@ -13,7 +14,6 @@ interface ViewStudentsModalProps {
   onClose: () => void;
   classId: string;
   className: string;
-  // [NEW] Callback to notify parent (InstructorClassesPage) to refresh stats
   onStatusChange?: () => void; 
 }
 
@@ -25,6 +25,7 @@ interface StudentEnrollment {
   avatar_url: string;
   status: 'pending' | 'approved' | 'rejected';
   enrolled_at: string;
+  conflict_report: string[];
 }
 
 export default function ViewStudentsModal({ isOpen, onClose, classId, className, onStatusChange }: ViewStudentsModalProps) {
@@ -72,7 +73,8 @@ export default function ViewStudentsModal({ isOpen, onClose, classId, className,
           email: profile?.email || 'No email',
           avatar_url: profile?.avatar_url || '',
           status: enrollment.status,
-          enrolled_at: enrollment.enrolled_at
+          enrolled_at: enrollment.enrolled_at,
+          conflict_report: enrollment.conflict_report || [],
         };
       });
 
@@ -100,22 +102,22 @@ export default function ViewStudentsModal({ isOpen, onClose, classId, className,
       .update({ status: newStatus })
       .eq('id', enrollmentId);
 
-    setProcessingId(null);
-
     if (error) {
       showToast("Error", "Failed to update status", "error");
-    } else {
-      showToast("Success", `Student ${newStatus}`, "success");
-      
-      // Optimistic update locally
-      setStudents(prev => prev.map(s => 
-        s.enrollment_id === enrollmentId ? { ...s, status: newStatus } : s
-      ));
+      setProcessingId(null);
+      return;
+    } 
+    
 
-      // [NEW] Notify parent page to refresh "Total Students" or "Enrolled" counts
-      if (onStatusChange) {
-        onStatusChange();
-      }
+    setProcessingId(null);
+    showToast("Success", `Student ${newStatus}`, "success");
+    
+    setStudents(prev => prev.map(s => 
+      s.enrollment_id === enrollmentId ? { ...s, status: newStatus } : s
+    ));
+
+    if (onStatusChange) {
+      onStatusChange();
     }
   };
 
@@ -150,56 +152,87 @@ export default function ViewStudentsModal({ isOpen, onClose, classId, className,
               {students.map((student) => (
                 <div 
                   key={student.enrollment_id} 
-                  className="flex items-center justify-between p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bar-bg)]"
+                  className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bar-bg)]"
                 >
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={student.avatar_url} />
-                      <AvatarFallback><User size={16} /></AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold text-[var(--color-text-primary)]">{student.name}</p>
-                      <p className="text-xs text-[var(--color-text-secondary)]">{student.email}</p>
-                    </div>
-                  </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <Avatar>
+                            <AvatarImage src={student.avatar_url} />
+                            <AvatarFallback><User size={16} /></AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-semibold text-[var(--color-text-primary)]">{student.name}</p>
+                                <p className="text-xs text-[var(--color-text-secondary)]">{student.email}</p>
+                            </div>
+                        </div>
 
-                  <div className="flex items-center gap-3">
-                    {student.status === 'pending' ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => updateStatus(student.enrollment_id, 'approved')}
-                          disabled={!!processingId}
-                          className="p-1.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 transition-colors"
-                          title="Approve"
-                        >
-                          {processingId === student.enrollment_id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                        </button>
-                        <button
-                          onClick={() => updateStatus(student.enrollment_id, 'rejected')}
-                          disabled={!!processingId}
-                          className="p-1.5 rounded-full bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 transition-colors"
-                          title="Reject"
-                        >
-                          <Ban size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <Badge 
-                        variant="secondary" 
-                        className="capitalize"
-                        style={{
-                          backgroundColor: theme === 'dark' 
-                            ? (student.status === 'approved' ? 'rgba(20, 83, 45, 0.3)' : 'rgba(127, 29, 29, 0.3)')
-                            : (student.status === 'approved' ? '#DCFCE7' : '#FEE2E2'),
-                          color: theme === 'dark'
-                            ? (student.status === 'approved' ? '#4ade80' : '#f87171')
-                            : (student.status === 'approved' ? '#166534' : '#991B1B')
-                        }}
-                      >
-                        {student.status}
-                      </Badge>
+                        <div className="flex items-center gap-3">
+                            {student.status === 'pending' && student.conflict_report.length > 0 && (
+                                <div title="Conflicts Detected">
+                                    <AlertTriangle size={20} className="text-amber-500" />
+                                </div>
+                            )}
+                            {student.status === 'pending' ? (
+                            <div className="flex gap-2">
+                                <button
+                                onClick={() => updateStatus(student.enrollment_id, 'approved')}
+                                disabled={!!processingId}
+                                className="p-1.5 rounded-full transition-colors flex items-center justify-center"
+                                style={{
+                                    backgroundColor: theme === 'dark' ? 'rgba(22, 101, 52, 0.3)' : '#DCFCE7',
+                                    color: theme === 'dark' ? '#4ade80' : '#166534',
+                                    border: `1px solid ${theme === 'dark' ? 'transparent' : '#86EFAC'}`
+                                }}
+                                title="Approve"
+                                >
+                                {processingId === student.enrollment_id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                </button>
+                                
+                                <button
+                                onClick={() => updateStatus(student.enrollment_id, 'rejected')}
+                                disabled={!!processingId}
+                                className="p-1.5 rounded-full transition-colors flex items-center justify-center"
+                                style={{
+                                    backgroundColor: theme === 'dark' ? 'rgba(127, 29, 29, 0.3)' : '#FEE2E2',
+                                    color: theme === 'dark' ? '#f87171' : '#991B1B',
+                                    border: `1px solid ${theme === 'dark' ? 'transparent' : '#FCA5A5'}`
+                                }}
+                                title="Reject"
+                                >
+                                <Ban size={16} />
+                                </button>
+                            </div>
+                            ) : (
+                            <Badge 
+                                variant="secondary" 
+                                className="capitalize"
+                                style={{
+                                backgroundColor: theme === 'dark' 
+                                    ? (student.status === 'approved' ? 'rgba(20, 83, 45, 0.3)' : 'rgba(127, 29, 29, 0.3)')
+                                    : (student.status === 'approved' ? '#DCFCE7' : '#FEE2E2'),
+                                color: theme === 'dark'
+                                    ? (student.status === 'approved' ? '#4ade80' : '#f87171')
+                                    : (student.status === 'approved' ? '#166534' : '#991B1B')
+                                }}
+                            >
+                                {student.status}
+                            </Badge>
+                            )}
+                        </div>
+                    </div>
+
+                    {student.conflict_report && student.conflict_report.length > 0 && (
+                        <div className="mt-3 p-3 rounded-lg border border-amber-300 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-900/10">
+                            <p className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                                <AlertTriangle size={14} /> Student Reported Conflict:
+                            </p>
+                            <ul className="list-disc list-inside text-xs text-amber-700 dark:text-amber-400 ml-2 mt-1 space-y-0.5">
+                                {student.conflict_report.map((report, index) => (
+                                    <li key={index} className="truncate">{report}</li>
+                                ))}
+                            </ul>
+                        </div>
                     )}
-                  </div>
                 </div>
               ))}
             </div>

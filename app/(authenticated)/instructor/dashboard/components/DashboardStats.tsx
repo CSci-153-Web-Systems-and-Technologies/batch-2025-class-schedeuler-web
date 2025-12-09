@@ -1,3 +1,4 @@
+// app/(authenticated)/instructor/dashboard/components/DashboardStats.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -27,6 +28,10 @@ const StatCard: React.FC<StatCardProps> = ({
 }) => {
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
+  
+  // Use a default for light mode if not provided, or ensure background is set
+  const lightBg = badgeSettings?.light.bg || "#F3F4F6";
+  const lightText = badgeSettings?.light.text || "#374151";
 
   return (
     <div 
@@ -49,7 +54,7 @@ const StatCard: React.FC<StatCardProps> = ({
           {badgeText && badgeSettings && (
             <span 
               className={`text-[10px] font-bold px-2 py-1 rounded-full ${badgeSettings.darkClasses}`}
-              style={!isDark ? { backgroundColor: badgeSettings.light.bg, color: badgeSettings.light.text } : {}}
+              style={!isDark ? { backgroundColor: lightBg, color: lightText } : {}}
             >
               {badgeText}
             </span>
@@ -65,6 +70,7 @@ export default function DashboardStats() {
   const { tasks } = useTasks();
   const supabase = createClient();
   const [totalStudents, setTotalStudents] = useState(0);
+  const [conflictCount, setConflictCount] = useState(0);
 
   const classesThisWeek = React.useMemo(() => {
     const now = new Date();
@@ -76,7 +82,7 @@ export default function DashboardStats() {
   const pendingTasks = tasks.filter(t => t.type === EventType.TASK && !t.completed).length;
 
   useEffect(() => {
-    async function fetchStudentCount() {
+    async function fetchStats() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -84,17 +90,44 @@ export default function DashboardStats() {
       
       if (classes && classes.length > 0) {
         const classIds = classes.map(c => c.id);
-        const { count } = await supabase
+        
+        const { data: enrollments, count: studentCount } = await supabase
           .from('enrollments')
-          .select('*', { count: 'exact', head: true })
+          .select('conflict_report', { count: 'exact' })
           .in('class_id', classIds)
           .eq('status', 'approved');
         
-        setTotalStudents(count || 0);
+        setTotalStudents(studentCount || 0);
+
+        if (enrollments) {
+            const conflicts = enrollments.filter(e => 
+                e.conflict_report && 
+                Array.isArray(e.conflict_report) && 
+                e.conflict_report.length > 0
+            ).length;
+            setConflictCount(conflicts);
+        } else {
+            setConflictCount(0);
+        }
+      } else {
+          setTotalStudents(0);
+          setConflictCount(0);
       }
     }
-    fetchStudentCount();
-  }, [supabase]);
+    fetchStats();
+  }, [supabase, subjects]); 
+
+  const isConflict = conflictCount > 0;
+  
+  const conflictBadgeSettings = {
+    light: { 
+      bg: isConflict ? "#FEE2E2" : "#DCFCE7", 
+      text: isConflict ? "#DC2626" : "#166534" 
+    },
+    darkClasses: isConflict 
+      ? "dark:bg-red-900/30 dark:text-red-400" 
+      : "dark:bg-green-900/30 dark:text-green-400"
+  };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -129,14 +162,11 @@ export default function DashboardStats() {
         icon={<ListTodo size={20} />} 
       />
       <StatCard 
-        title="Lab Hours" 
-        value="0" 
-        subtitle="Schedule Issues" 
-        badgeText="No issues"
-        badgeSettings={{
-          light: { bg: "#FEE2E2", text: "#DC2626" },
-          darkClasses: "dark:bg-red-900/30 dark:text-red-400"
-        }}
+        title="Conflicts" 
+        value={conflictCount} 
+        subtitle="Active Conflicting Students" 
+        badgeText={isConflict ? "Review Required" : "No issues"}
+        badgeSettings={conflictBadgeSettings}
         icon={<AlertCircle size={20} />} 
       />
     </div>

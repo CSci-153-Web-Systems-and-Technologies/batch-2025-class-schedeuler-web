@@ -1,11 +1,10 @@
+// app/(authenticated)/instructor/calendar/page.tsx
 'use client';
 
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 import AppBreadcrumb from '@/app/components/ui/AppBreadCrumb'; 
 
-// Reuse the complex CalendarView component from the student directory
-// This component handles Month/Week/Day views, Drag & Drop, and Event Modals
 const CalendarView = dynamic(() => import('@/app/(authenticated)/student/calendar/components/CalendarView'), {
   ssr: false,
   loading: () => (
@@ -28,10 +27,9 @@ export default function InstructorCalendarPage() {
           <div className="text-lg text-[var(--color-text-primary)]">Loading...</div>
         </div>
       }> 
-        {/* We use the component without 'isScheduleOnly' prop.
-          This enables the full feature set: Tasks, Exams, and Subjects.
-        */}
-        <CalendarView />
+        <CalendarView 
+            disableSubjectCreation={true}
+        />
       </Suspense>
     </div>
   );

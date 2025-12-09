@@ -136,11 +136,13 @@ export const generateRecurringEvents = (
   return events.sort((a, b) => a.start.getTime() - b.start.getTime());
 };
 
-export const checkForConflicts = (newEvent: CalendarEvent, existingEvents: CalendarEvent[]): boolean => {
+export const getConflictingEvents = (newEvent: CalendarEvent, existingEvents: CalendarEvent[]): CalendarEvent[] => {
   const candidates = existingEvents.filter(e =>
     (e.type === EventType.SUBJECT || e.type === EventType.EXAM) && 
     e.id !== newEvent.id
   );
+
+  const conflicts: CalendarEvent[] = [];
 
   const getDayMinutes = (d: Date) => d.getHours() * 60 + d.getMinutes();
   
@@ -160,8 +162,10 @@ export const checkForConflicts = (newEvent: CalendarEvent, existingEvents: Calen
     const newIsRecurring = newEvent.repeatPattern !== RepeatPattern.NONE;
     const exIsRecurring = existing.repeatPattern !== RepeatPattern.NONE;
 
+    let isConflict = false;
+
     if (!newIsRecurring && !exIsRecurring) {
-        if (isSameDay(newEvent.start, existing.start)) return true;
+        if (isSameDay(newEvent.start, existing.start)) isConflict = true;
     }
 
     else if (newIsRecurring && exIsRecurring) {
@@ -176,7 +180,7 @@ export const checkForConflicts = (newEvent: CalendarEvent, existingEvents: Calen
         if (rangesOverlap) {
             const newDays = newEvent.repeatDays || [];
             const exDays = existing.repeatDays || [];
-            if (newDays.some(day => exDays.includes(day))) return true;
+            if (newDays.some(day => exDays.includes(day))) isConflict = true;
         }
     }
 
@@ -192,11 +196,19 @@ export const checkForConflicts = (newEvent: CalendarEvent, existingEvents: Calen
             const dayOfWeek = single.start.getDay();
             if ((recurring.repeatDays || []).includes(dayOfWeek)) {
                 const isExcluded = recurring.excludeDates?.some(d => isSameDay(d, single.start));
-                if (!isExcluded) return true;
+                if (!isExcluded) isConflict = true;
             }
         }
     }
+
+    if (isConflict) {
+        conflicts.push(existing);
+    }
   }
 
-  return false;
+  return conflicts;
+};
+
+export const checkForConflicts = (newEvent: CalendarEvent, existingEvents: CalendarEvent[]): boolean => {
+    return getConflictingEvents(newEvent, existingEvents).length > 0;
 };

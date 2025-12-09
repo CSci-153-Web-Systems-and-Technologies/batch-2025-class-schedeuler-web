@@ -1,3 +1,4 @@
+// app/(authenticated)/student/dashboard/page.tsx
 "use client";
 
 import React, { useEffect, useState, useMemo, useRef } from "react";
@@ -13,6 +14,7 @@ import TasksDeadline from "./components/TasksDeadline";
 import JoinClassButton from "./components/JoinClassButton";
 import PomodoroTimer from "./components/PomodoroTimer";
 import SubjectsList from "./components/SubjectsList";
+import StudentVoteCard from "./components/StudentVoteCard";
 
 import { ClassCardProps } from "../../components/ClassCard";
 import { EventType } from '@/types/calendar';
@@ -86,45 +88,37 @@ export default function StudentDashboard() {
     >
       <AppBreadcrumb />
 
-      {/* Header: Greeting & Action */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <Greeting userName={userName} />
         <JoinClassButton className="shadow-lg hover:scale-105 transition-transform" />
       </div>
 
-      {/* TOP SECTION: Overview (Left) + Calendar & Pomodoro (Right) */}
+      <StudentVoteCard />
       <div className="flex flex-col xl:flex-row gap-6 mb-6">
         
-        {/* Left Column: Today's Classes (Takes up more space) */}
         <div className="w-full xl:w-2/3">
           <StudentOverview subjects={todaySchedule} />
         </div>
 
-        {/* Right Column: Calendar & Pomodoro Stack */}
         <div className="w-full xl:w-1/3 flex flex-col gap-6">
-          {/* Calendar Widget */}
           <div 
             className="p-4 rounded-2xl border border-[var(--color-border)] shadow-sm bg-[var(--color-components-bg)]"
           >
             <CalendarDisplay />
           </div>
 
-          {/* Pomodoro Widget */}
           <div>
              <PomodoroTimer />
           </div>
         </div>
       </div>
 
-      {/* BOTTOM SECTION: Tasks & Subjects (Side by Side) */}
       <div className="flex flex-col lg:flex-row gap-6">
         
-        {/* Tasks Deadline Widget */}
         <div className="flex-1 min-w-0">
           <TasksDeadline /> 
         </div>
 
-        {/* Subjects List Widget */}
         <div className="flex-1 min-w-0">  
           <SubjectsList subjects={subjectsListData} />
         </div>  

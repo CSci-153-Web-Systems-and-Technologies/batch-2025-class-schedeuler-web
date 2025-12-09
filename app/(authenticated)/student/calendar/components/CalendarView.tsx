@@ -32,6 +32,7 @@ interface CalendarViewProps {
   readOnly?: boolean; 
   onSlotSelect?: (slotInfo: SlotInfo) => void;
   onEventSelect?: (event: CalendarEvent) => void; 
+  disableSubjectCreation?: boolean; 
 }
 
 const FIVE_AM = moment().hours(5).minutes(0).toDate();
@@ -41,7 +42,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   isScheduleOnly = false,
   readOnly = false,
   onSlotSelect,
-  onEventSelect
+  onEventSelect,
+  disableSubjectCreation = false
 }) => {
   const { tasks: taskEvents, addTask, updateTask, deleteTask: deleteTaskContext } = useTasks();
   const { 
@@ -179,6 +181,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({
        eventToProcess.end = new Date(newBaseStart.getTime() + durationMs);
     }
 
+    if (disableSubjectCreation && event.type === EventType.SUBJECT && !existingEvent) {
+        showToast("Restricted", "Only Task and Exam creation is allowed here.", "error");
+        return;
+    }
+
     if ((event.type === EventType.SUBJECT || event.type === EventType.EXAM) && checkForConflicts(eventToProcess, combinedBaseEvents)) {
         showToast("Conflict", "Overlap detected.", "error");
         return;
@@ -214,7 +221,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       const duration = moment(originalEvent.end).diff(moment(originalEvent.start));
       const newEnd = moment(start).add(duration, 'milliseconds').toDate();
       const updatedEvent = { ...originalEvent, start, end: newEnd };
-
+      
+      if (disableSubjectCreation && updatedEvent.type === EventType.SUBJECT) {
+          showToast("Restricted", "Cannot move subjects on this page.", "error");
+          return;
+      }
+      
       if ((updatedEvent.type === EventType.SUBJECT || updatedEvent.type === EventType.EXAM) && 
           checkForConflicts(updatedEvent, combinedBaseEvents)) {
           showToast("Conflict", "Overlap detected.", "error");
@@ -232,6 +244,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     const originalEvent = combinedBaseEvents.find(e => e.id === baseEventId);
 
     if (originalEvent) {
+        if (disableSubjectCreation && originalEvent.type === EventType.SUBJECT) {
+            showToast("Restricted", "Cannot resize subjects on this page.", "error");
+            return;
+        }
+
         const updatedEvent = { ...originalEvent, start, end };
         if ((updatedEvent.type === EventType.SUBJECT || updatedEvent.type === EventType.EXAM) && 
             checkForConflicts(updatedEvent, combinedBaseEvents)) {
@@ -243,7 +260,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   const eventStyleGetter = (event: CalendarEvent) => {
-    const isDraggable = !readOnly && !isScheduleOnly && !isRecurringSubject(event); 
+    const isSubjectEvent = event.type === EventType.SUBJECT;
+    const isDraggable = !readOnly && !isScheduleOnly && !isRecurringSubject(event) && (!disableSubjectCreation || !isSubjectEvent); 
+    const isResizable = !readOnly && (!disableSubjectCreation || !isSubjectEvent);
+
     const backgroundColor = event.color || (event.type === EventType.EXAM ? '#52c41a' : event.type === EventType.TASK ? '#ff4d4f' : 'var(--color-primary)');
     return { 
         style: {
@@ -254,7 +274,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             border: '0px',
             display: 'block',
             cursor: isDraggable ? 'grab' : 'default',
-        }
+        },
+        draggable: isDraggable, 
+        resizable: isResizable,
     };
   };
   
@@ -323,7 +345,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                                 start.setHours(9, 0, 0, 0);
                                 const end = new Date(start);
                                 end.setHours(10, 0, 0, 0);
-                                setSelectedEvent({ id: '', title: '', start, end, type: EventType.TASK } as CalendarEvent);
+                                const defaultType = disableSubjectCreation ? EventType.TASK : EventType.SUBJECT;
+                                setSelectedEvent({ id: '', title: '', start, end, type: defaultType } as CalendarEvent);
                                 setShowEventModal(true);
                             }}
                             className="text-xs bg-[var(--color-primary)] text-white px-3 py-1.5 rounded-full font-medium"
@@ -414,6 +437,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           event={selectedEvent}
           slotInfo={selectedSlot}
           isScheduleOnly={isScheduleOnly}
+          disableSubjectCreation={disableSubjectCreation} 
           onSave={handleEventSave}
           onDelete={handleEventDelete}
           onClose={() => {
