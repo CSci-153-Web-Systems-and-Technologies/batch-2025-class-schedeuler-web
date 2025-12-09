@@ -10,6 +10,7 @@ interface DynamicTopbarProps {
   userImage?: string;
   showMobileMenu?: boolean;
   onMobileMenuToggle?: () => void;
+  userRole?: 'student' | 'instructor';
 }
 
 export default function DynamicTopbar(props: DynamicTopbarProps) {
@@ -20,6 +21,7 @@ export default function DynamicTopbar(props: DynamicTopbarProps) {
       {...props}
       isDarkMode={theme === 'dark'} 
       toggleDarkMode={toggleTheme} 
+      userRole={props.userRole}
     />
   );
 }

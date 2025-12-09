@@ -26,6 +26,7 @@ interface TopbarProps {
   toggleDarkMode?: () => void;
   showMobileMenu?: boolean;
   onMobileMenuToggle?: () => void;
+  userRole?: 'student' | 'instructor'; 
 }
 
 function getInitialsWithoutMiddle(fullName: string): string {
@@ -50,6 +51,7 @@ export default function Topbar({
   toggleDarkMode,
   showMobileMenu = false,
   onMobileMenuToggle,
+  userRole = 'student'
 }: TopbarProps) {
   
   const nameParts = userName.trim().split(/\s+/);
@@ -63,6 +65,9 @@ export default function Topbar({
   const router = useRouter();
   const { showToast } = useToast();
 
+  const profileHref = `/${userRole}/profile`;
+  const settingsHref = `/${userRole}/settings`;
+
   const handleLogout = async () => {
     const result = await logout();
     if (result?.success) {
@@ -72,7 +77,6 @@ export default function Topbar({
     }
   };
 
-  // Helper class for menu items to ensure they respect the theme on hover
   const menuItemClass = "cursor-pointer flex items-center gap-2 focus:bg-[var(--color-hover)] focus:text-[var(--color-text-primary)]";
 
   return (
@@ -85,7 +89,6 @@ export default function Topbar({
         <div className="flex items-center gap-2">
           <div className="hidden lg:flex items-center gap-3">
             
-            {/* Notification Bell */}
             <NotificationPopover />
 
             {toggleDarkMode && (
@@ -102,7 +105,6 @@ export default function Topbar({
               </button>
             )}
 
-            {/* [FIX] Added modal={false} to prevent body scroll locking and layout shift */}
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2 rounded-full pl-1 pr-3" style={{ backgroundColor: "transparent" }}>
@@ -128,14 +130,14 @@ export default function Topbar({
                 <DropdownMenuSeparator className="bg-[var(--color-border)]" />
                 
                 <DropdownMenuItem asChild className={menuItemClass}>
-                  <Link href="/student/profile">
+                  <Link href={profileHref}>
                     <User size={16} />
                     Profile
                   </Link>
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem asChild className={menuItemClass}>
-                  <Link href="/student/settings">
+                  <Link href={settingsHref}>
                     <SettingsIcon size={16} />
                     Settings
                   </Link>
