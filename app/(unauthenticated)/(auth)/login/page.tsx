@@ -91,7 +91,7 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="w-full flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden bg-white min-h-[500px] md:h-auto">
+    <div className="w-full flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden bg-white max-w-5xl mx-auto md:min-h-[500px]">
       {/* Left Section - Hidden on Mobile */}
       <section className="hidden md:flex md:flex-1 relative bg-blue-600">
         <Card className="w-full h-full rounded-none md:rounded-l-2xl shadow-none border-none overflow-hidden relative bg-transparent">
@@ -117,19 +117,19 @@ const LoginPage = () => {
       </section>
 
       {/* Right Section - Login Form */}
-      <section className="flex-1 flex flex-col">
-        <Card className="w-full h-full rounded-none md:rounded-r-2xl shadow-none border-0 px-6 sm:px-10 lg:px-14 py-8">
+      <section className="flex-1 flex flex-col relative">
+        <Card className="w-full h-full rounded-none md:rounded-r-2xl shadow-none border-0 px-6 sm:px-10 lg:px-14 py-8 flex flex-col justify-center">
           
-          {/* Back Button */}
-          <div className="w-full flex justify-start mb-4">
-            <Link href="/" className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--color-primary)] transition-colors">
+          {/* Back Button - Absolute to save vertical space */}
+          <div className="absolute top-4 left-4 z-10">
+            <Link href="/" className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--color-primary)] transition-colors p-2">
               <ArrowLeft size={18} />
-              Back
+              <span className="hidden sm:inline">Back</span>
             </Link>
           </div>
 
-          {/* Mobile Branding - Visible only on small screens */}
-          <div className="md:hidden flex flex-col items-center gap-2 mb-6">
+          {/* Mobile Branding */}
+          <div className="md:hidden flex flex-col items-center gap-2 mb-6 mt-6">
             <div className="flex items-center gap-2">
               <img src="/icons/schedule.png" alt="Logo" className="w-8 h-8" />
               <span className="text-xl font-bold text-primary">SchedEuler</span>
@@ -143,7 +143,7 @@ const LoginPage = () => {
           
           <CardContent className="p-0">
             <form action={handleFormSubmit}>
-              <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" name="email" type="email" placeholder="m@example.com" required defaultValue={savedEmail} />
@@ -170,7 +170,7 @@ const LoginPage = () => {
                 )}
               </div>
               
-              <CardFooter className="flex flex-col gap-4 p-0 mt-6">
+              <CardFooter className="flex flex-col gap-3 p-0 mt-6">
                 <Button type="submit" className="w-full">Login</Button>
                 <div className="flex items-center w-full">
                   <div className="flex-grow h-px bg-gray-300"></div>
