@@ -1,3 +1,4 @@
+// app/(authenticated)/student/tasks/TaskContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
@@ -22,7 +23,6 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   const { showToast } = useToast();
 
-  // --- FETCH TASKS ---
   useEffect(() => {
     const fetchTasks = async () => {
       setLoading(true);
@@ -60,12 +60,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     fetchTasks();
   }, [supabase]);
 
-  // --- ADD TASK ---
   const addTask = useCallback(async (newTask: CalendarEvent) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Optimistic Update
     const tempId = Date.now().toString();
     setTasks(prev => [...prev, { ...newTask, id: tempId }]);
 
@@ -88,15 +86,19 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       console.error('Error adding task:', error);
       setTasks(prev => prev.filter(t => t.id !== tempId));
-      showToast("Error", "Failed to create task.", "error");
+      showToast("Error", `Failed to create task: ${error.message}`, "error");
     } else {
       setTasks(prev => prev.map(t => t.id === tempId ? { ...newTask, id: data.id } : t));
       showToast("Success", "Task created successfully.", "success");
     }
   }, [supabase, showToast]);
 
-  // --- UPDATE TASK ---
   const updateTask = useCallback(async (updatedTask: CalendarEvent) => {
+    if (!updatedTask.id || updatedTask.id.length < 10 || updatedTask.id === 'temp_draft') {
+       console.warn("Skipping update on invalid/temp ID:", updatedTask.id);
+       return;
+    }
+
     setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
 
     const dbPayload = {
@@ -115,13 +117,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     
     if (error) {
       console.error('Error updating task:', error);
-      showToast("Error", "Failed to update task.", "error");
-    } else {
-      // Optional: showToast("Updated", "Task saved.", "success");
-    }
+      showToast("Update Failed", error.message || "Could not save changes.", "error");
+    } 
   }, [supabase, showToast]);
 
-  // --- DELETE TASK ---
   const deleteTask = useCallback(async (id: string) => {
     setTasks(prev => prev.filter(t => t.id !== id));
 
@@ -129,13 +128,12 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     if (error) {
       console.error('Error deleting task:', error);
-      showToast("Error", "Failed to delete task.", "error");
+      showToast("Error", error.message || "Failed to delete task.", "error");
     } else {
       showToast("Deleted", "Task deleted successfully.", "success");
     }
   }, [supabase, showToast]);
 
-  // --- TOGGLE COMPLETE ---
   const toggleComplete = useCallback(async (id: string, isCompleted?: boolean, progress?: number) => {
     setTasks(prev => prev.map(task => {
       if (task.id === id) {
@@ -146,14 +144,17 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
           completed: newCompleted, 
           task_estimate: newEstimate 
         }).eq('id', id).then(({ error }) => {
-          if (error) console.error("Error toggling complete:", error);
+          if (error) {
+             console.error("Error toggling complete:", error);
+             showToast("Error", error.message, "error");
+          }
         });
 
         return { ...task, completed: newCompleted, taskEstimate: newEstimate };
       }
       return task;
     }));
-  }, [supabase]);
+  }, [supabase, showToast]);
 
   const contextValue = useMemo(() => ({
     tasks, addTask, updateTask, deleteTask, toggleComplete, loading
