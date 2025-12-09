@@ -28,90 +28,57 @@ export async function updateSession(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const pathname = request.nextUrl.pathname;
+  const path = request.nextUrl.pathname
 
-  const publicRoutes = [
-    '/login',
-    '/signup',
-    '/error', 
-    '/landing',
-    '/auth/callback',
-    '/select-account-type',
-    '/'
-  ]
-
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname.startsWith(route)
-  )
+  const isPublicRoute = 
+    path === '/' ||
+    path.startsWith('/landing') || 
+    path.startsWith('/login') || 
+    path.startsWith('/signup') || 
+    path.startsWith('/error') ||
+    path.startsWith('/auth/callback') ||
+    path.startsWith('/select-account-type');
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
-  
 
   if (user) {
-      let userRole = user.user_metadata.account_type as ('student' | 'instructor' | undefined); 
-      
-      const isSelectAccountPage = pathname.startsWith('/select-account-type');
-      
-      if (!userRole) {
-          const { data: profile } = await supabase
-              .from('profiles')
-              .select('account_type')
-              .eq('id', user.id)
-              .single();
-              
-          const dbRole = profile?.account_type as ('student' | 'instructor' | undefined);
+    let userRole = user.user_metadata.account_type as 'student' | 'instructor' | undefined;
 
-          if (!dbRole) {
-              if (!isSelectAccountPage) {
-                  const url = request.nextUrl.clone();
-                  url.pathname = '/select-account-type';
-                  return NextResponse.redirect(url);
-              }
-              return supabaseResponse;
-          }
-          userRole = dbRole;
-      }
-      
-      if (userRole) {
-          const actualRole = userRole;
-          const correctDashboard = `/${actualRole}/dashboard`;
-          const requestedPrefix = pathname.split('/')[1];
-          
-          if (actualRole === 'instructor' && pathname.startsWith('/student/')) {
-              const url = request.nextUrl.clone();
-              url.pathname = '/error'; 
-              return NextResponse.redirect(url);
-          }
-          
-          if (actualRole === 'student' && pathname.startsWith('/instructor/')) {
-              const url = request.nextUrl.clone();
-              url.pathname = '/error'; 
-              return NextResponse.redirect(url);
-          }
+    if (!userRole) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('account_type')
+            .eq('id', user.id)
+            .single();
+        userRole = profile?.account_type;
+    }
 
-          if (isPublicRoute && !pathname.startsWith('/landing') && !pathname.startsWith('/auth/callback') && !pathname.startsWith('/error')) {
-              const url = request.nextUrl.clone();
-              url.pathname = correctDashboard;
-              return NextResponse.redirect(url);
-          }
-      }
+    if (!userRole && !path.startsWith('/select-account-type')) {
+        return NextResponse.redirect(new URL('/select-account-type', request.url));
+    }
+
+    if (userRole) {
+        const isInstructorPath = path.startsWith('/instructor');
+        const isStudentPath = path.startsWith('/student');
+
+        if (isInstructorPath && userRole !== 'instructor') {
+            return NextResponse.redirect(new URL('/error', request.url));
+        }
+
+        if (isStudentPath && userRole !== 'student') {
+            return NextResponse.redirect(new URL('/error', request.url));
+        }
+        
+        if (isPublicRoute && !path.startsWith('/error') && !path.startsWith('/select-account-type')) {
+             const dest = userRole === 'instructor' ? '/instructor/dashboard' : '/student/dashboard';
+             return NextResponse.redirect(new URL(dest, request.url));
+        }
+    }
   }
 
-  if (!user && pathname === '/') {
-    const url = request.nextUrl.clone()
-    url.pathname = '/landing'
-    return NextResponse.redirect(url)
-  }
-
-  return supabaseResponse;
-}
-
-export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  return supabaseResponse
 }
