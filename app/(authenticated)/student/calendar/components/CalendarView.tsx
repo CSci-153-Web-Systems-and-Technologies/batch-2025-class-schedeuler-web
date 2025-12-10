@@ -35,7 +35,6 @@ interface CalendarViewProps {
   disableSubjectCreation?: boolean; 
 }
 
-// [UPDATED] Custom Header: Better spacing
 const CustomWeekHeader = ({ date }: { date: Date }) => {
   return (
     <div className="flex flex-col items-center justify-center h-full w-full">
@@ -426,6 +425,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                         onFilterChange={setFilter} 
                         filter={filter}
                         availableViews={toolbarViews} 
+                        showFilter={!isScheduleOnly} 
                     />
                     ),
                     event: (props: EventProps<CalendarEvent>) => <EventComponent {...props} view={view} />,
