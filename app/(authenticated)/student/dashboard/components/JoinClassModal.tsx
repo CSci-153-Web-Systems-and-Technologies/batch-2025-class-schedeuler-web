@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, Search, Loader2, ShieldAlert } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
+import { useSubjects } from '../../subjects/SubjectContext'; // Import context for global refresh
 
 interface JoinClassModalProps {
   isOpen: boolean;
@@ -14,27 +15,48 @@ export default function JoinClassModal({ isOpen, onClose }: JoinClassModalProps)
   const [classCode, setClassCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [foundClass, setFoundClass] = useState<any | null>(null);
+  
   const supabase = createClient();
   const { showToast } = useToast();
+  const { refreshSubjects } = useSubjects(); // Use context refresh
 
   const handleSearch = async () => {
     if (!classCode.trim()) return;
     setLoading(true);
     setFoundClass(null);
 
-    const { data, error } = await supabase
+    // [FIX] Step 1: Fetch Class WITHOUT the 'profiles' join to avoid relationship errors
+    const { data: classData, error: classError } = await supabase
       .from('classes')
-      .select('id, name, instructor_id, profiles(name)') 
+      .select('id, name, instructor_id')
       .eq('code', classCode.trim())
       .single();
 
-    setLoading(false);
-
-    if (error || !data) {
-      showToast('Error', 'Class not found. Check the code.', 'error');
-    } else {
-      setFoundClass(data);
+    if (classError || !classData) {
+      console.error("Search Error:", classError); // Log actual error for debugging
+      showToast('Error', 'Class not found. Check the code or your connection.', 'error');
+      setLoading(false);
+      return;
     }
+
+    // [FIX] Step 2: Manually fetch instructor name using the ID from Step 1
+    let instructorName = 'Unknown Instructor';
+    if (classData.instructor_id) {
+        const { data: profileData } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', classData.instructor_id)
+            .single();
+        
+        if (profileData) instructorName = profileData.name;
+    }
+
+    setLoading(false);
+    // Construct the object structure the UI expects
+    setFoundClass({ 
+        ...classData, 
+        profiles: { name: instructorName } 
+    });
   };
 
   const handleJoin = async () => {
@@ -63,7 +85,21 @@ export default function JoinClassModal({ isOpen, onClose }: JoinClassModalProps)
         showToast('Error', 'Failed to join class.', 'error');
       }
     } else {
+      // Notify Instructor
+      await supabase.from('notifications').insert({
+          user_id: foundClass.instructor_id,
+          title: 'New Enrollment Request',
+          message: `A student has requested to join "${foundClass.name}".`,
+          type: 'info',
+          link: '/instructor/classes',
+          is_read: false
+      });
+
       showToast('Success', 'Request sent! Waiting for approval.', 'success');
+      
+      // Refresh Global State
+      refreshSubjects();
+      
       onClose();
       setClassCode('');
       setFoundClass(null);
@@ -108,10 +144,9 @@ export default function JoinClassModal({ isOpen, onClose }: JoinClassModalProps)
             <div className="bg-[var(--color-hover)] p-4 rounded-xl border border-[var(--color-border)]">
               <h3 className="font-bold text-lg text-[var(--color-text-primary)]">{foundClass.name}</h3>
               <p className="text-sm text-[var(--color-text-secondary)]">
-                Instructor: {Array.isArray(foundClass.profiles) ? foundClass.profiles[0]?.name : foundClass.profiles?.name || 'Unknown'}
+                Instructor: {foundClass.profiles?.name || 'Unknown'}
               </p>
               
-              {/* [NEW] Privacy Notice in Modal */}
               <div className="mt-4 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg text-xs text-blue-800 dark:text-blue-300">
                 <ShieldAlert size={14} className="mt-0.5 flex-shrink-0" />
                 <p>
