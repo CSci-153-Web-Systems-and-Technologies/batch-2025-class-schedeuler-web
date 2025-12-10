@@ -1,11 +1,12 @@
+// app/(unauthenticated)/landing/components/LandingHeader.tsx
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/app/components/ui/Button";
 import { useSmoothScroll } from "@/hooks/useSmoothScroll";
 import { NavLink, SectionProps } from "@/types/sections";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 
 const NAV_LINKS: NavLink[] = [
   { href: "#features", label: "Features" },
@@ -19,17 +20,6 @@ const LandingHeader = ({ className }: SectionProps) => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollToElement } = useSmoothScroll();
-  const router = useRouter();
-
-  const handleLoginClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    router.push("/login");
-  };
-  
-  const handleSignupClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    router.push("/signup");
-  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -76,18 +66,18 @@ const LandingHeader = ({ className }: SectionProps) => {
   const renderAuthButtons = () => (
     <div className="hidden md:flex gap-2">
       <Button 
+        asChild
         variant="outline" 
-        onClick={handleLoginClick} 
         className="rounded-2xl hover:scale-110"
       >
-        Login
+        <Link href="/login">Login</Link>
       </Button>
       
       <Button 
-        onClick={handleSignupClick} 
+        asChild
         className="hidden lg:block rounded-2xl hover:scale-110"
       >
-        Sign Up
+        <Link href="/signup">Sign Up</Link>
       </Button>
     </div>
   );
@@ -97,11 +87,11 @@ const LandingHeader = ({ className }: SectionProps) => {
       <nav className="p-4">
         {renderNavLinks(NAV_LINKS, true)}
         <div className="mt-4 flex flex-col gap-2 pt-4 border-t border-border">
-            <Button variant="outline" onClick={handleLoginClick} className="w-full rounded-xl">
-                Login
+            <Button asChild variant="outline" className="w-full rounded-xl">
+                <Link href="/login">Login</Link>
             </Button>
-            <Button onClick={handleSignupClick} className="w-full rounded-xl">
-                Sign Up
+            <Button asChild className="w-full rounded-xl">
+                <Link href="/signup">Sign Up</Link>
             </Button>
         </div>
       </nav>

@@ -1,6 +1,7 @@
 // app/components/layout/Footer.tsx
 "use client";
 import Image from "next/image";
+import Link from "next/link";
 import { NavLink } from "@/types/sections";
 import { cn } from "@/lib/utils";
 
@@ -26,9 +27,9 @@ const Footer = () => {
     )}>
       {NAV_LINKS.map((link) => (
         <li key={link.href}>
-          <a href={link.href} className={NAV_LINK_CLASSES}>
+          <Link href={link.href} className={NAV_LINK_CLASSES}>
             {link.label}
-          </a>
+          </Link>
         </li>
       ))}
     </ul>

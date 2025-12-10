@@ -3,9 +3,9 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/app/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
 interface PublicHeaderProps {
@@ -17,7 +17,6 @@ const PublicHeader = ({ className }: PublicHeaderProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   
-  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
@@ -40,24 +39,13 @@ const PublicHeader = ({ className }: PublicHeaderProps) => {
     checkAuth();
   }, [supabase]);
 
-  const handleLogoClick = () => {
-    router.push("/");
-  };
-
-  const handleLoginClick = () => router.push("/login");
-  const handleSignupClick = () => router.push("/signup");
-
   return (
     <header className={cn(
-      "header-glass", // Reusing the global class for consistent styling
+      "header-glass", 
       scrolled && "backdrop-blur-lg shadow-lg",
       className
     )}>
-      {/* Logo Section */}
-      <div
-        className="flex items-center gap-2 cursor-pointer"
-        onClick={handleLogoClick}
-      >
+      <Link href="/" className="flex items-center gap-2 cursor-pointer">
         <Image src="/icons/schedule.png" alt="Logo" width={32} height={32} />
         <div className="flex flex-col">
           <h1 className="text-lg sm:text-xl font-bold text-gradient">
@@ -67,23 +55,23 @@ const PublicHeader = ({ className }: PublicHeaderProps) => {
             Plan With Ease, No Conflicts Please!
           </p>
         </div>
-      </div>
+      </Link>
 
-      {/* Auth Buttons - Only shown if NOT authenticated */}
       {!loading && !isAuthenticated && (
         <div className="flex gap-2">
           <Button
+            asChild
             variant="outline"
-            onClick={handleLoginClick}
             className="rounded-2xl hover:scale-105 transition-transform"
           >
-            Login
+            <Link href="/login">Login</Link>
           </Button>
+          
           <Button
-            onClick={handleSignupClick}
-            className="rounded-2xl hover:scale-105 transition-transform hidden sm:inline-flex" // Hidden on very small screens to save space if needed, or keep visible
+            asChild
+            className="rounded-2xl hover:scale-105 transition-transform hidden sm:inline-flex"
           >
-            Sign Up
+            <Link href="/signup">Sign Up</Link>
           </Button>
         </div>
       )}
