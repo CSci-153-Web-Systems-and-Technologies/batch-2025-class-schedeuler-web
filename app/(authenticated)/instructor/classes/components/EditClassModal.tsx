@@ -1,3 +1,4 @@
+// app/(authenticated)/instructor/classes/components/EditClassModal.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -15,6 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/app/components/ui/Select";
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import '@/styles/DatePickerStyles.css';
 
 interface EditClassModalProps {
   isOpen: boolean;
@@ -45,6 +49,7 @@ export default function EditClassModal({ isOpen, onClose, classData, onClassUpda
     startTime: '09:00',
     endTime: '10:30',
     repeatDays: [] as number[],
+    repeatUntil: null as Date | null, // [NEW]
   });
   
   const [loading, setLoading] = useState(false);
@@ -63,6 +68,7 @@ export default function EditClassModal({ isOpen, onClose, classData, onClassUpda
         startTime: classData.startTime || '09:00', 
         endTime: classData.endTime || '10:30',
         repeatDays: classData.repeatDays || [],
+        repeatUntil: classData.repeatUntil ? new Date(classData.repeatUntil) : null,
       });
     }
   }, [classData]);
@@ -103,6 +109,7 @@ export default function EditClassModal({ isOpen, onClose, classData, onClassUpda
         start_time: formData.startTime,
         end_time: formData.endTime,
         repeat_days: formData.repeatDays,
+        repeat_until: formData.repeatUntil,
         schedule_settings: { displayString }
       })
       .eq('id', classData.id);
@@ -208,7 +215,7 @@ export default function EditClassModal({ isOpen, onClose, classData, onClassUpda
                     ))}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Start Time</label>
                         <input 
@@ -227,6 +234,18 @@ export default function EditClassModal({ isOpen, onClose, classData, onClassUpda
                             className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
                         />
                     </div>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Repeat Until (Optional)</label>
+                    <DatePicker
+                        selected={formData.repeatUntil}
+                        onChange={(date) => setFormData({...formData, repeatUntil: date})}
+                        dateFormat="MMMM d, yyyy"
+                        isClearable
+                        placeholderText="Forever"
+                        className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                    />
                 </div>
             </div>
 

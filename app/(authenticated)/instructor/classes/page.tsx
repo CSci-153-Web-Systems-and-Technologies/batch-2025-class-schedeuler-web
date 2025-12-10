@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
+// ... (keep existing imports)
 import { 
   Search, Filter, MoreHorizontal, BookOpen, Users, AlertCircle, 
   Calendar, MapPin, Edit, Clock, Trash2, Plus, Copy
@@ -36,6 +37,7 @@ interface ClassItem {
   startTime?: string;
   endTime?: string;
   repeatDays?: number[];
+  repeatUntil?: string; // [NEW] Added for EditModal
   location: string;
   enrolled: number;
   capacity: number;
@@ -101,7 +103,7 @@ export default function InstructorClassesPage() {
     try {
         const { data: classesData, error } = await supabase
         .from("classes")
-        .select("id, name, code, subject_code, location, start_time, end_time, repeat_days, description, color, class_type, status")
+        .select("id, name, code, subject_code, location, start_time, end_time, repeat_days, repeat_until, description, color, class_type, status")
         .eq("instructor_id", user.id);
 
         if (error) throw error;
@@ -158,6 +160,7 @@ export default function InstructorClassesPage() {
                 startTime: cls.start_time,
                 endTime: cls.end_time,
                 repeatDays: cls.repeat_days,
+                repeatUntil: cls.repeat_until,
                 location: cls.location || "TBD",
                 enrolled: enrolledCount,
                 capacity: 50, 
@@ -185,6 +188,7 @@ export default function InstructorClassesPage() {
         setLoading(false);
     }
   }, [supabase, showToast]);
+
 
   useEffect(() => {
     fetchClasses();
