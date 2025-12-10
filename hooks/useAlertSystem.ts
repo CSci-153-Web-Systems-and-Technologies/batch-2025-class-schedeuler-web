@@ -24,12 +24,18 @@ export function useAlertSystem() {
       const newNotified = [...notified];
       let hasNew = false;
 
+      const isInstructor = profile.account_type === 'instructor';
+      const scheduleLink = isInstructor ? '/instructor/schedule' : '/student/schedule';
+      const tasksLink = isInstructor ? '/instructor/tasks' : '/student/tasks';
+
       if (profile.notify_class_alerts) {
         const todayEvents = generateRecurringEvents(subjects, now, 'day');
         
         todayEvents.forEach(event => {
           if (event.type !== EventType.SUBJECT) return;
           
+          if (/^\d{13}$/.test(event.id)) return;
+
           const uniqueId = `${event.id}_${event.start.getTime()}`;
           
           if (newNotified.includes(uniqueId)) return;
@@ -43,7 +49,7 @@ export function useAlertSystem() {
               `Upcoming Class: ${event.title}`,
               `Class starts in ${Math.ceil(diffInMinutes)} minutes at ${event.location || 'Unknown location'}.`,
               'info',
-              '/student/schedule'
+              scheduleLink
             );
 
             newNotified.push(uniqueId);
@@ -55,6 +61,9 @@ export function useAlertSystem() {
       if (profile.notify_task_reminders) {
         tasks.forEach(task => {
           if (task.completed || !task.start) return;
+          
+          if (/^\d{13}$/.test(task.id)) return;
+
           if (newNotified.includes(task.id)) return;
 
           const diffInHours = (task.start.getTime() - now.getTime()) / 1000 / 60 / 60;
@@ -66,7 +75,7 @@ export function useAlertSystem() {
               `Task Due Soon: ${task.title}`,
               `This task is due in ${Math.ceil(diffInHours)} hours.`,
               'warning',
-              '/student/tasks'
+              tasksLink
             );
 
             newNotified.push(task.id);
@@ -92,7 +101,6 @@ export function useAlertSystem() {
     };
 
     checkAlerts();
-
 
     const interval = setInterval(checkAlerts, 60000);
 

@@ -10,6 +10,7 @@ import { useCurrentTitle } from "@/hooks/useCurrentTitle";
 import { useUser } from "@/app/context/UserContext";
 import { SubjectProvider } from '@/app/(authenticated)/student/subjects/SubjectContext'; 
 import { TaskProvider } from '@/app/(authenticated)/student/tasks/TaskContext'; 
+import { useAlertSystem } from "@/hooks/useAlertSystem"; 
 
 function InstructorLayoutContent({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -19,6 +20,8 @@ function InstructorLayoutContent({ children }: { children: React.ReactNode }) {
   const userImage = profile?.avatar_url || undefined;
   const userRole = profile?.account_type as 'student' | 'instructor' | undefined; 
   const currentTitle = useCurrentTitle();
+
+  useAlertSystem();
 
   return (
     <>
