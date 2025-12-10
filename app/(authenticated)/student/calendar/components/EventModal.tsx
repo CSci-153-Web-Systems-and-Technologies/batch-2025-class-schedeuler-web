@@ -1,4 +1,4 @@
-// components/Calendar/EventModal.tsx
+// app/(authenticated)/student/calendar/components/EventModal.tsx
 import React, { useState, useEffect } from 'react';
 import { CalendarEvent, EventType, RepeatPattern } from '@/types/calendar';
 import { SlotInfo } from 'react-big-calendar';
@@ -67,7 +67,8 @@ const EventModal: React.FC<EventModalProps> = ({
       setFormData(prev => ({
         ...prev,
         start: slotInfo.start,
-        end: new Date(slotInfo.start.getTime() + 60 * 60 * 1000), 
+        // [FIX] Use slotInfo.end directly to capture the actual drag duration
+        end: slotInfo.end, 
         ...defaultEvent
       }));
     } else {
