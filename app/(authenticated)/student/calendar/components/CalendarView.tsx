@@ -1,4 +1,4 @@
-// components/Calendar/CalendarView.tsx
+// app/(authenticated)/student/calendar/components/CalendarView.tsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar as BigCalendar, momentLocalizer, View, SlotInfo, EventProps } from 'react-big-calendar';
 import moment from 'moment';
@@ -34,6 +34,20 @@ interface CalendarViewProps {
   onEventSelect?: (event: CalendarEvent) => void; 
   disableSubjectCreation?: boolean; 
 }
+
+// [UPDATED] Custom Header: Better spacing
+const CustomWeekHeader = ({ date }: { date: Date }) => {
+  return (
+    <div className="flex flex-col items-center justify-center h-full w-full">
+      <span className="text-[10px] md:text-xs font-bold uppercase text-[var(--color-text-secondary)] tracking-wider">
+        {moment(date).format('ddd')}
+      </span>
+      <span className="text-sm md:text-xl font-bold text-[var(--color-text-primary)] mt-0.5">
+        {moment(date).format('DD')}
+      </span>
+    </div>
+  );
+};
 
 const FIVE_AM = moment().hours(5).minutes(0).toDate();
 
@@ -391,7 +405,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
       ) : (
         
-        <div className="p-4 calendar-container" style={{ height: 'calc(100vh - 120px)' }}> 
+        <div className={`p-4 calendar-container view-${view}`} style={{ height: 'calc(100vh - 120px)' }}> 
             <DnDCalendar
                 key={calendarKey}
                 localizer={localizer}
@@ -415,6 +429,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                     />
                     ),
                     event: (props: EventProps<CalendarEvent>) => <EventComponent {...props} view={view} />,
+                    header: CustomWeekHeader, 
                 }}
                 eventPropGetter={eventStyleGetter}
                 selectable={!readOnly || !!onSlotSelect} 

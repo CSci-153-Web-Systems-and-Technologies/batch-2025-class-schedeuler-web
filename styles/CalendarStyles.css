@@ -1,4 +1,5 @@
 /* components/Calendar/CalendarStyles.css */
+
 .calendar-view {
   padding: 1.5em;
   height: 100vh;
@@ -11,6 +12,31 @@
   padding: 1rem;
   height: calc(100vh - 120px);
   border: 1px solid var(--color-border);
+  overflow-x: auto; 
+  overflow-y: hidden;
+}
+
+.calendar-container.view-week .rbc-calendar {
+  min-width: 450px; 
+}
+
+@media (max-width: 768px) {
+  .calendar-container {
+    padding: 0.5rem;
+  }
+
+  .rbc-time-gutter,
+  .rbc-time-header-gutter {
+    width: 35px !important; 
+    min-width: 35px !important;
+    max-width: 35px !important; 
+    font-size: 10px;
+    padding-right: 2px !important;
+  }
+  
+  .rbc-header {
+    padding: 4px 0 !important;
+  }
 }
 
 .rbc-time-view .rbc-day-slot .rbc-time-slot {
@@ -19,6 +45,10 @@
 
 .rbc-timeslot-group {
     min-height: 96px;
+}
+
+.rbc-allday-cell {
+  display: none !important;
 }
 
 .rbc-calendar {
@@ -48,6 +78,17 @@
   color: var(--color-text-primary);
   border-bottom: 1px solid var(--color-border);
   background-color: var(--color-components-bg);
+  text-align: center;
+  vertical-align: middle;
+  height: auto !important;
+  min-height: 50px; 
+}
+
+.rbc-header > div {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .rbc-day-bg {
@@ -63,25 +104,11 @@
   background-color: var(--color-hover);
 }
 
-.rbc-time-view {
-  border-color: var(--color-border);
-}
-
-.rbc-time-header {
-  border-color: var(--color-border);
-}
-
-.rbc-time-header-content {
-  border-color: var(--color-border);
-}
-
-.rbc-time-content {
-  border-color: var(--color-border);
-}
-
-.rbc-timeslot-group {
-  border-color: var(--color-border);
-}
+.rbc-time-view { border-color: var(--color-border); }
+.rbc-time-header { border-color: var(--color-border); }
+.rbc-time-header-content { border-color: var(--color-border); }
+.rbc-time-content { border-color: var(--color-border); }
+.rbc-timeslot-group { border-color: var(--color-border); }
 
 .rbc-time-gutter {
   color: var(--color-text-primary);
