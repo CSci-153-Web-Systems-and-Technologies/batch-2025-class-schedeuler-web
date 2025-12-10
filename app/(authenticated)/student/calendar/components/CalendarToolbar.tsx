@@ -1,4 +1,4 @@
-// components/Calendar/CalendarToolbar.tsx
+// app/(authenticated)/student/calendar/components/CalendarToolbar.tsx
 import React from 'react';
 import { ToolbarProps, View } from 'react-big-calendar'; 
 import { ChevronLeft, ChevronRight, Filter, BookOpen, GraduationCap, School, ChevronDown } from 'lucide-react';
@@ -18,6 +18,7 @@ interface CalendarToolbarProps extends ToolbarProps<CalendarEvent, object> {
   onFilterChange?: (filter: 'all' | EventType) => void;
   filter?: 'all' | EventType;
   availableViews?: View[]; 
+  showFilter?: boolean;
 }
 
 const allViewOptions: { value: View; label: string }[] = [
@@ -47,7 +48,8 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
   filter = 'all',
   label,
   view,
-  availableViews = ['month', 'week', 'day']
+  availableViews = ['month', 'week', 'day'],
+  showFilter = true
 }) => {
   
   const visibleViewOptions = allViewOptions.filter(opt => availableViews.includes(opt.value));
@@ -120,7 +122,7 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
                 size="sm" 
                 className="flex items-center gap-2 text-[var(--color-text-primary)]"
             >
-                {getCurrentFilterViewLabel(view, filter)}
+                {showFilter ? getCurrentFilterViewLabel(view, filter) : (allViewOptions.find(o => o.value === view)?.label || 'View')}
                 <ChevronDown size={16} />
             </Button>
         </DropdownMenuTrigger>
@@ -139,21 +141,24 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
                 ))}
             </DropdownMenuGroup>
 
-            <DropdownMenuSeparator />
-
-            <DropdownMenuLabel>Filter</DropdownMenuLabel>
-            <DropdownMenuGroup>
-                {filterOptions.map((option) => (
-                    <DropdownMenuItem
-                        key={option.value}
-                        onSelect={() => handleFilterChange(option.value)}
-                        className={filter === option.value ? 'bg-accent font-medium' : ''}
-                    >
-                        <option.Icon size={14} className="mr-2" />
-                        {option.label}
-                    </DropdownMenuItem>
-                ))}
-            </DropdownMenuGroup>
+            {showFilter && (
+                <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Filter</DropdownMenuLabel>
+                    <DropdownMenuGroup>
+                        {filterOptions.map((option) => (
+                            <DropdownMenuItem
+                                key={option.value}
+                                onSelect={() => handleFilterChange(option.value)}
+                                className={filter === option.value ? 'bg-accent font-medium' : ''}
+                            >
+                                <option.Icon size={14} className="mr-2" />
+                                {option.label}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuGroup>
+                </>
+            )}
         </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -200,7 +205,7 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
         </div>
 
         <div className="hidden lg:flex items-center gap-4">
-            {renderFilterControls()}
+            {showFilter && renderFilterControls()}
             {renderViewControls()}
         </div>
       </div>
