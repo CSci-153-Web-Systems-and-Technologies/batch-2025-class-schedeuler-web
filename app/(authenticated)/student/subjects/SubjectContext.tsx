@@ -161,18 +161,24 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
       if (!user) return;
 
       channel = supabase
-        .channel('universal_subject_updates')
-        
+        .channel('subject_context_updates')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'events', filter: `user_id=eq.${user.id}` },
           () => fetchSubjects(true)
         )
-
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'enrollments' },
-          () => fetchSubjects(true)
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'enrollments',
+            filter: `student_id=eq.${user.id}` 
+          },
+          (payload) => {
+             console.log("Realtime: Enrollment changed", payload);
+             fetchSubjects(true);
+          }
         )
         
         .on(
@@ -192,17 +198,7 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
                  const isTracked = subjectsRef.current.some(s => s.id === updatedClassId);
 
                  if (isMyClass || isTracked) {
-                     const newEvent = mapClassToEvent(payload.new);
-                     setSubjects(prev => {
-                         const exists = prev.some(s => s.id === updatedClassId);
-                         if (exists) {
-                             return prev.map(s => s.id === updatedClassId ? newEvent : s);
-                         } else if (isMyClass) {
-                             return [...prev, newEvent];
-                         }
-                         return prev;
-                     });
-                     
+                     console.log("Realtime: Tracked class updated", payload.new.name);
                      fetchSubjects(true); 
                  }
              }
@@ -221,7 +217,7 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [supabase, fetchSubjects, mapClassToEvent]);
+  }, [supabase, fetchSubjects]);
 
 
   const addSubject = useCallback(async (newSubject: CalendarEvent) => {
