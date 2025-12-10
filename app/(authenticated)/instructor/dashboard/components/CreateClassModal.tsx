@@ -1,3 +1,4 @@
+// app/(authenticated)/instructor/dashboard/components/CreateClassModal.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -12,6 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/app/components/ui/Select";
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import '@/styles/DatePickerStyles.css';
 
 // [NEW] Imports for Conflict Detection
 import { checkForConflicts } from '@/utils/calendarUtils';
@@ -53,6 +57,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
     startTime: '09:00',
     endTime: '10:30',
     repeatDays: [] as number[],
+    repeatUntil: null as Date | null, // [NEW] Repeat Until State
   });
   
   const [loading, setLoading] = useState(false);
@@ -74,7 +79,8 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
          ...prev,
          startTime: '09:00',
          endTime: '10:30',
-         repeatDays: []
+         repeatDays: [],
+         repeatUntil: null
        }));
     }
   }, [isOpen, initialData]);
@@ -140,7 +146,8 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
         start: startDate,
         end: endDate,
         repeatPattern: RepeatPattern.WEEKLY,
-        repeatDays: formData.repeatDays
+        repeatDays: formData.repeatDays,
+        repeatUntil: formData.repeatUntil || undefined // [NEW] Pass repeatUntil to conflict check
     };
 
     if (checkForConflicts(tempEvent, subjects)) {
@@ -175,6 +182,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
               start_time: formData.startTime,
               end_time: formData.endTime,
               repeat_days: formData.repeatDays,
+              repeat_until: formData.repeatUntil, // [NEW] Save to DB
               schedule_settings: { displayString },
               status: 'Active'
             }
@@ -193,7 +201,8 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
             color: COLOR_OPTIONS[0],
             startTime: '09:00',
             endTime: '10:30',
-            repeatDays: []
+            repeatDays: [],
+            repeatUntil: null
         });
         setClassCode(generateCode()); 
         
@@ -312,7 +321,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
                     ))}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Start Time</label>
                         <input 
@@ -331,6 +340,18 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
                             className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
                         />
                     </div>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">Repeat Until (Optional)</label>
+                    <DatePicker
+                        selected={formData.repeatUntil}
+                        onChange={(date) => setFormData({...formData, repeatUntil: date})}
+                        dateFormat="MMMM d, yyyy"
+                        isClearable
+                        placeholderText="Forever"
+                        className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                    />
                 </div>
             </div>
 
