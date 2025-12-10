@@ -1,4 +1,3 @@
-// app/(authenticated)/student/classes/page.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -30,7 +29,7 @@ export default function StudentClassesPage() {
   const supabase = createClient();
 
   const fetchClasses = useCallback(async () => {
-    await new Promise(resolve => setTimeout(resolve, 50)); 
+    await new Promise(resolve => setTimeout(resolve, 100)); 
     
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -113,14 +112,13 @@ export default function StudentClassesPage() {
             event: '*', 
             schema: 'public',
             table: 'enrollments',
-            filter: `student_id=eq.${user.id}`, 
+            filter: `student_id=eq.${user.id}`,
           },
-          () => {
-            console.log("Enrollment update detected, refreshing...");
+          (payload) => {
+            console.log("Realtime: Enrollment status changed", payload);
             fetchClasses();
           }
         )
-        
         .on(
             'postgres_changes',
             {
@@ -130,8 +128,7 @@ export default function StudentClassesPage() {
               filter: `user_id=eq.${user.id}`,
             },
             (payload) => {
-                if (payload.new.title.includes('Enrollment')) {
-                    console.log("Enrollment notification received, triggering class refresh...");
+                if (payload.new.title && payload.new.title.toLowerCase().includes('enrollment')) {
                     fetchClasses();
                 }
             }
@@ -147,7 +144,10 @@ export default function StudentClassesPage() {
           (payload) => {
             setClasses(currentClasses => {
                 const isRelevant = currentClasses.some(c => c.id === payload.new.id);
-                if (isRelevant) fetchClasses();
+                if (isRelevant) {
+                    console.log("Realtime: Enrolled class details updated");
+                    fetchClasses();
+                }
                 return currentClasses;
             });
           }
