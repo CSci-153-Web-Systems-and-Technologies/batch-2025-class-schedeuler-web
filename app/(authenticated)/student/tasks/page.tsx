@@ -12,7 +12,6 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from "@/app/context/ToastContext";
 
-
 function getTaskProgress(task: CalendarEvent): number {
     const estimate = task.taskEstimate;
     if (estimate && estimate.endsWith('%')) {
@@ -139,8 +138,16 @@ export default function TasksPage() {
     useEffect(() => {
         if (isCreating) return;
 
-        const updatedTask = selectedTask ? taskEvents.find(t => t.id === selectedTask.id) : null;
+        let updatedTask = selectedTask ? taskEvents.find(t => t.id === selectedTask.id) : null;
         
+        if (!updatedTask && selectedTask && /^\d+$/.test(selectedTask.id)) {
+             updatedTask = taskEvents.find(t => 
+                t.title === selectedTask.title && 
+                t.start.getTime() === selectedTask.start.getTime() &&
+                !/^\d+$/.test(t.id)
+            );
+        }
+
         if (updatedTask) {
             setSelectedTask(updatedTask);
         } else if (taskEvents.length > 0 && !selectedTask) {
@@ -149,7 +156,7 @@ export default function TasksPage() {
         } else if (taskEvents.length === 0) {
             setSelectedTask(null);
         }
-    }, [taskEvents, activeTab, isCreating]);
+    }, [taskEvents, activeTab, isCreating]); 
 
     const sortedTasks = taskEvents.sort((a, b) => a.start!.getTime() - b.start!.getTime());
     
@@ -251,7 +258,7 @@ export default function TasksPage() {
         setSelectedTask(newTask);
     };
 
-    const handleSaveNewTask = () => {
+    const handleSaveNewTask = async () => {
         if (!selectedTask) return;
 
         if (!selectedTask.title?.trim()) {
@@ -259,7 +266,12 @@ export default function TasksPage() {
             return;
         }
 
-        addTask(selectedTask); 
+        const tempId = await addTask(selectedTask);
+        
+        if (tempId) {
+            setSelectedTask(prev => prev ? { ...prev, id: tempId } : null);
+        }
+        
         setIsCreating(false);
         setActiveTab('current');
     };
@@ -289,13 +301,6 @@ export default function TasksPage() {
                         <h2 className="text-2xl font-bold" style={{ color: "var(--color-text-primary)" }}>
                             Tasks & Deadlines
                         </h2>
-                        <Button 
-                            onClick={handleAddTask}
-                            size="icon-sm"
-                            className="lg:hidden bg-[var(--color-primary)] text-white"
-                        >
-                            <Plus size={20} />
-                        </Button>
                     </div>
                     
                     <div className="flex justify-between p-1 mb-4 rounded-xl" style={{ backgroundColor: 'var(--color-hover)' }}>
@@ -501,13 +506,6 @@ export default function TasksPage() {
                             <p className="text-[var(--color-text-secondary)] mt-2">
                                 Select a task from the list to view details or create a new one.
                             </p>
-                            <Button 
-                                onClick={handleAddTask}
-                                className="mt-6 bg-[var(--color-primary)] text-white"
-                            >
-                                <Plus size={18} className="mr-2" />
-                                Create Task
-                            </Button>
                         </div>
                     )}
                 </div>

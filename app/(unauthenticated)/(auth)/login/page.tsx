@@ -92,7 +92,6 @@ const LoginPage = () => {
 
   return (
     <div className="w-full flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden bg-white max-w-5xl mx-auto md:min-h-[500px]">
-      {/* Left Section - Hidden on Mobile */}
       <section className="hidden md:flex md:flex-1 relative bg-blue-600">
         <Card className="w-full h-full rounded-none md:rounded-l-2xl shadow-none border-none overflow-hidden relative bg-transparent">
           <div className="absolute inset-0" style={{ background: "linear-gradient(-139deg, #345AD3 0%, #4169E1 35%, #5B91F5 65%, #9FC3FF 100%)" }} />
@@ -116,11 +115,9 @@ const LoginPage = () => {
         </Card>
       </section>
 
-      {/* Right Section - Login Form */}
       <section className="flex-1 flex flex-col relative">
         <Card className="w-full h-full rounded-none md:rounded-r-2xl shadow-none border-0 px-6 sm:px-10 lg:px-14 py-8 flex flex-col justify-center">
           
-          {/* Back Button - Absolute to save vertical space */}
           <div className="absolute top-4 left-4 z-10">
             <Link href="/" className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--color-primary)] transition-colors p-2">
               <ArrowLeft size={18} />
@@ -128,7 +125,6 @@ const LoginPage = () => {
             </Link>
           </div>
 
-          {/* Mobile Branding */}
           <div className="md:hidden flex flex-col items-center gap-2 mb-6 mt-6">
             <div className="flex items-center gap-2">
               <img src="/icons/schedule.png" alt="Logo" className="w-8 h-8" />
