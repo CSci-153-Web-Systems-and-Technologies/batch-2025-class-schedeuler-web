@@ -1,6 +1,7 @@
+// app/(unauthenticated)/landing/components/HeroSection.tsx
 "use client";
 import Image from "next/image";
-import { useRouter } from "next/navigation"; 
+import Link from "next/link";
 import { Button } from "@/app/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/app/components/ui/Card";
 import { Badge } from "@/app/components/ui/Badge";
@@ -27,11 +28,8 @@ const QUICK_ACTIONS = [
 ] as const;
 
 const HeroSection = ({ className }: SectionProps) => {
-  const router = useRouter();
   const { scrollToElement } = useSmoothScroll(); 
 
-  const handleLogin = () => router.push("/login");
-  const handleSignup = () => router.push("/signup");
   const handleLearnMore = () => scrollToElement("#features");
 
   const renderStats = () => (
@@ -101,32 +99,29 @@ const HeroSection = ({ className }: SectionProps) => {
           tasks). Built for students and instructors.
         </p>
 
-        {/* --- BUTTONS SECTION --- */}
         <div className="flex flex-wrap gap-4 mb-8 md:mb-12">
-          {/* MOBILE BUTTONS (< md) */}
           <Button 
+            asChild
             size="lg" 
             className="md:hidden rounded-full hover:scale-105 flex-1"
-            onClick={handleLogin}
           >
-            Login
+            <Link href="/login">Login</Link>
           </Button>
           <Button 
+            asChild
             variant="outline" 
             size="lg" 
             className="md:hidden rounded-full hover:scale-105 flex-1"
-            onClick={handleSignup}
           >
-            Sign Up
+            <Link href="/signup">Sign Up</Link>
           </Button>
 
-          {/* DESKTOP/TABLET BUTTONS (>= md) */}
           <Button 
+            asChild
             size="lg" 
             className="hidden md:inline-flex rounded-full hover:scale-105"
-            onClick={handleLogin} 
           >
-            Get Started
+            <Link href="/login">Get Started</Link>
           </Button>
           <Button 
             variant="outline" 
@@ -154,10 +149,10 @@ const HeroSection = ({ className }: SectionProps) => {
           </div>
           
           <Button 
+            asChild
             className="w-full rounded-full bg-gradient-to-r from-primary to-[#8274FF]"
-            onClick={handleLogin} 
           >
-            Create Schedule
+            <Link href="/login">Create Schedule</Link>
           </Button>
         </CardContent>
       </Card>

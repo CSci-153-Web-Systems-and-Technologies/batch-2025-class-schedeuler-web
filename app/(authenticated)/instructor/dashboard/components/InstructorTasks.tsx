@@ -6,11 +6,10 @@ import { Checkbox } from "@/app/components/ui/Checkbox";
 import { Plus } from "lucide-react";
 import { useTasks } from "@/app/(authenticated)/student/tasks/TaskContext";
 import { EventType } from "@/types/calendar";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function InstructorTasks() {
   const { tasks: allTasks, toggleComplete, loading } = useTasks();
-  const router = useRouter();
 
   const groupedTasks = useMemo(() => {
     const today = new Date();
@@ -44,10 +43,6 @@ export default function InstructorTasks() {
 
   const handleToggle = (id: string, checked: boolean) => {
     toggleComplete(id, checked);
-  };
-
-  const handleAddTask = () => {
-    router.push('/instructor/tasks');
   };
 
   return (
@@ -105,13 +100,13 @@ export default function InstructorTasks() {
         )}
       </div>
 
-      <button 
-        onClick={handleAddTask}
+      <Link 
+        href="/instructor/tasks"
         className="flex items-center gap-2 text-sm font-bold text-[#4169E1] mt-6 hover:opacity-80 transition-opacity w-fit mx-auto"
       >
         <Plus size={16} />
         Manage Tasks
-      </button>
+      </Link>
     </div>
   );
 }

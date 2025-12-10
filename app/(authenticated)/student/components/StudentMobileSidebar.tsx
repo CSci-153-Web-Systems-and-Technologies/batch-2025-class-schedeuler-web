@@ -59,11 +59,6 @@ export default function StudentMobileSidebar({
     onClose();
   };
 
-  const handleNavigation = (href: string) => {
-    router.push(href);
-    onClose();
-  };
-
   const getIcon = (type: string) => {
     switch (type) {
       case "success": return <CheckCircle size={16} className="text-green-500" />;
@@ -179,12 +174,13 @@ export default function StudentMobileSidebar({
                 <ul className="space-y-2">
                   {mobileMenuItems.map((item) => (
                     <li key={item.href}>
-                      <button
-                        onClick={() => handleNavigation(item.href)}
+                      <Link
+                        href={item.href}
+                        onClick={onClose}
                         className="block w-full text-left px-3 py-3 rounded-lg text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] transition-colors"
                       >
                         {item.name}
-                      </button>
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -247,7 +243,6 @@ export default function StudentMobileSidebar({
                               </Link>
                           )}
                           
-                          {/* Actions */}
                           <div className="flex justify-end gap-3 mt-2">
                              {!notif.is_read && (
                                 <button 
@@ -275,21 +270,23 @@ export default function StudentMobileSidebar({
 
         {currentView === 'menu' && (
           <div className="p-4 border-t border-[var(--color-border)] space-y-2 flex-shrink-0">
-            <button 
-              onClick={() => handleNavigation("/student/profile")}
+            <Link 
+              href="/student/profile"
+              onClick={onClose}
               className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] rounded-lg transition-colors"
             >
               <User className="h-4 w-4" />
               <span>Profile</span>
-            </button>
+            </Link>
             
-            <button 
-              onClick={() => handleNavigation("/student/settings")}
+            <Link 
+              href="/student/settings"
+              onClick={onClose}
               className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-muted)] rounded-lg transition-colors"
             >
               <Settings className="h-4 w-4" />
               <span>Settings</span>
-            </button>
+            </Link>
             
             <button onClick={handleLogout} className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors mt-4">
               <LogOut className="h-4 w-4" />
