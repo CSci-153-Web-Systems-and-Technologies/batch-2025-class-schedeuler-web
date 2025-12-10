@@ -54,25 +54,45 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     fetchNotifications();
+  }, [fetchNotifications]);
 
-    const channel = supabase
-      .channel('public:notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, 
-        (payload) => {
-          const newNotif = payload.new as Notification;
-          setNotifications(prev => [newNotif, ...prev]);
-          showToast(newNotif.title, newNotif.message, newNotif.type);
-      })
-      .subscribe();
+  useEffect(() => {
+    let channel: any;
+
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      channel = supabase
+        .channel('realtime_user_notifications')
+        .on(
+          'postgres_changes', 
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          }, 
+          (payload) => {
+            const newNotif = payload.new as Notification;
+            
+            setNotifications(prev => [newNotif, ...prev]);
+            
+            showToast(newNotif.title, newNotif.message, newNotif.type);
+          }
+        )
+        .subscribe();
+    };
+
+    setupRealtime();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
-  }, [fetchNotifications, supabase, showToast]);
+  }, [supabase, showToast]);
 
   const markAsRead = async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-    
     await supabase.from("notifications").update({ is_read: true }).eq("id", id);
   };
 
