@@ -4,7 +4,8 @@
 import { createClient } from '@/utils/supabase/server';
 import nodemailer from 'nodemailer';
 
-const RATE_LIMIT_MINUTES = 10;
+const RATE_LIMIT_MINUTES = 3;
+const RATE_LIMIT_DISABLED_UNTIL = new Date('2025-12-11T12:00:00Z'); 
 
 export async function submitBugReport(formData: {
   subject: string;
@@ -18,24 +19,28 @@ export async function submitBugReport(formData: {
     return { error: "You must be logged in to submit a report." };
   }
 
-  const { data: lastReport, error: fetchError } = await supabase
-    .from('reports')
-    .select('created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+  const now = new Date();
+  const isRateLimitActive = now > RATE_LIMIT_DISABLED_UNTIL;
 
-  if (lastReport) {
-    const lastDate = new Date(lastReport.created_at);
-    const now = new Date();
-    const diffInMinutes = (now.getTime() - lastDate.getTime()) / 1000 / 60;
+  if (isRateLimitActive) {
+    const { data: lastReport, error: fetchError } = await supabase
+        .from('reports')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-    if (diffInMinutes < RATE_LIMIT_MINUTES) {
-      const waitTime = Math.ceil(RATE_LIMIT_MINUTES - diffInMinutes);
-      return { 
-        error: `Please wait ${waitTime} minute(s) before sending another report.` 
-      };
+    if (lastReport) {
+        const lastDate = new Date(lastReport.created_at);
+        const diffInMinutes = (now.getTime() - lastDate.getTime()) / 1000 / 60;
+
+        if (diffInMinutes < RATE_LIMIT_MINUTES) {
+        const waitTime = Math.ceil(RATE_LIMIT_MINUTES - diffInMinutes);
+        return { 
+            error: `Please wait ${waitTime} minute(s) before sending another report.` 
+        };
+        }
     }
   }
 
@@ -52,6 +57,7 @@ export async function submitBugReport(formData: {
     console.error("Database Error:", dbError);
     return { error: "Failed to log report. Please try again." };
   }
+  
   try {
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       console.error("❌ MISSING ENV VARIABLES: Make sure GMAIL_USER and GMAIL_APP_PASSWORD are in .env.local");
