@@ -82,18 +82,18 @@ export default function BugReport() {
 
   if (isSubmitted) {
     return (
-      <div className="max-w-xl mx-auto mt-12 p-8 bg-green-50 border border-green-200 rounded-2xl dark:bg-green-900/20 dark:border-green-800 shadow-sm animate-in fade-in zoom-in duration-300">
+      <div className="max-w-xl mx-auto mt-8 sm:mt-12 p-6 sm:p-8 bg-green-50 border border-green-200 rounded-xl sm:rounded-2xl dark:bg-green-900/20 dark:border-green-800 shadow-sm animate-in fade-in zoom-in duration-300">
         <div className="text-center">
-          <CheckCircle2 className="mx-auto h-16 w-16 text-green-600 dark:text-green-400 mb-4" />
-          <h3 className="text-2xl font-bold text-green-800 dark:text-green-300 mb-2">
+          <CheckCircle2 className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-green-600 dark:text-green-400 mb-4" />
+          <h3 className="text-xl sm:text-2xl font-bold text-green-800 dark:text-green-300 mb-2">
             Report Received
           </h3>
-          <p className="text-green-700 dark:text-green-400 mb-6">
+          <p className="text-sm sm:text-base text-green-700 dark:text-green-400 mb-6">
             Thanks for your help! We've sent a copy to our team.
           </p>
           <button
             onClick={() => setIsSubmitted(false)}
-            className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-all shadow-md hover:shadow-lg dark:bg-green-700 dark:hover:bg-green-600"
+            className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-all shadow-md hover:shadow-lg dark:bg-green-700 dark:hover:bg-green-600 text-sm sm:text-base"
           >
             Submit Another Report
           </button>
@@ -104,28 +104,28 @@ export default function BugReport() {
 
   return (
     <div
-      className="max-w-2xl mx-auto py-8 px-8 lg:px-12 rounded-3xl shadow-sm border border-[var(--color-border)] mt-6"
+      className="max-w-2xl mx-auto py-6 px-4 sm:py-8 sm:px-8 lg:px-12 rounded-2xl sm:rounded-3xl shadow-sm border border-[var(--color-border)] mt-4 sm:mt-6"
       style={{
         backgroundColor: "var(--color-components-bg)",
       }}
     >
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <h2
-          className="text-3xl font-bold mb-2"
+          className="text-2xl sm:text-3xl font-bold mb-2"
           style={{ color: "var(--color-text-primary)" }}
         >
           Report an Issue
         </h2>
-        <p className="text-[var(--color-text-secondary)] text-lg">
+        <p className="text-[var(--color-text-secondary)] text-sm sm:text-lg">
           Found a bug? Have feedback? Let us know below.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         <div>
           <label
             htmlFor="subject"
-            className="block text-sm font-bold mb-2 uppercase tracking-wide"
+            className="block text-xs sm:text-sm font-bold mb-1.5 sm:mb-2 uppercase tracking-wide"
             style={{ color: "var(--color-text-secondary)" }}
           >
             Subject
@@ -136,9 +136,9 @@ export default function BugReport() {
             name="subject"
             value={formData.subject}
             onChange={handleChange}
-            placeholder="Brief description (e.g., Login not working)"
+            placeholder="Brief description..."
             required
-            className="w-full px-4 py-3 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all font-medium"
+            className="w-full px-4 py-2.5 sm:py-3 border rounded-lg sm:rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all font-medium text-sm sm:text-base"
             style={{
               backgroundColor: "var(--color-bar-bg)",
               borderColor: "var(--color-border)",
@@ -150,7 +150,7 @@ export default function BugReport() {
         <div>
           <label
             htmlFor="category"
-            className="block text-sm font-bold mb-2 uppercase tracking-wide"
+            className="block text-xs sm:text-sm font-bold mb-1.5 sm:mb-2 uppercase tracking-wide"
             style={{ color: "var(--color-text-secondary)" }}
           >
             Category
@@ -162,7 +162,7 @@ export default function BugReport() {
               value={formData.category}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all appearance-none cursor-pointer font-medium"
+              className="w-full px-4 py-2.5 sm:py-3 border rounded-lg sm:rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all appearance-none cursor-pointer font-medium text-sm sm:text-base"
               style={{
                 backgroundColor: "var(--color-bar-bg)",
                 borderColor: "var(--color-border)",
@@ -193,7 +193,7 @@ export default function BugReport() {
         <div>
           <label
             htmlFor="message"
-            className="block text-sm font-bold mb-2 uppercase tracking-wide"
+            className="block text-xs sm:text-sm font-bold mb-1.5 sm:mb-2 uppercase tracking-wide"
             style={{ color: "var(--color-text-secondary)" }}
           >
             Message
@@ -203,10 +203,10 @@ export default function BugReport() {
             name="message"
             value={formData.message}
             onChange={handleChange}
-            rows={6}
-            placeholder="Please provide detailed information about the issue..."
+            rows={5}
+            placeholder="Please provide detailed information..."
             required
-            className="w-full px-4 py-3 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all resize-none font-medium leading-relaxed"
+            className="w-full px-4 py-2.5 sm:py-3 border rounded-lg sm:rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all resize-none font-medium leading-relaxed text-sm sm:text-base"
             style={{
               backgroundColor: "var(--color-bar-bg)",
               borderColor: "var(--color-border)",
@@ -218,7 +218,7 @@ export default function BugReport() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full py-4 px-4 text-white font-bold text-lg rounded-xl shadow-md focus:outline-none focus:ring-4 focus:ring-opacity-50 transition-all hover:scale-[1.01] hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+          className="w-full py-3 sm:py-4 px-4 text-white font-bold text-base sm:text-lg rounded-xl shadow-md focus:outline-none focus:ring-4 focus:ring-opacity-50 transition-all hover:scale-[1.01] hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
           style={{
             backgroundColor: "var(--color-primary)",
             boxShadow: isSubmitting ? "none" : "0 4px 14px 0 rgba(65, 105, 225, 0.39)",
@@ -227,7 +227,7 @@ export default function BugReport() {
           {isSubmitting ? (
             <>
               <Loader2 className="animate-spin h-5 w-5" />
-              Sending Report...
+              Sending...
             </>
           ) : (
             "Submit Report"
