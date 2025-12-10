@@ -12,7 +12,6 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from "@/app/context/ToastContext";
 
-// ... (Helper functions getTaskProgress, etc. remain the same) ...
 function getTaskProgress(task: CalendarEvent): number {
     const estimate = task.taskEstimate;
     if (estimate && estimate.endsWith('%')) {
@@ -136,20 +135,16 @@ export default function TasksPage() {
         }
     };
 
-    // [FIXED] Enhanced useEffect to recover selectedTask when its ID changes (Temp -> Real)
     useEffect(() => {
         if (isCreating) return;
 
-        // 1. Try to find the exact same task ID
         let updatedTask = selectedTask ? taskEvents.find(t => t.id === selectedTask.id) : null;
         
-        // 2. [RECOVERY] If not found, and we are holding a temp ID (numeric), look for the new real ID
-        // This connects the UI to the real DB task once the save finishes
         if (!updatedTask && selectedTask && /^\d+$/.test(selectedTask.id)) {
              updatedTask = taskEvents.find(t => 
                 t.title === selectedTask.title && 
                 t.start.getTime() === selectedTask.start.getTime() &&
-                !/^\d+$/.test(t.id) // Ensure we found the real one
+                !/^\d+$/.test(t.id)
             );
         }
 
@@ -167,13 +162,16 @@ export default function TasksPage() {
     
     const groupedTasksMap = sortedTasks.reduce((acc, task) => {
         let status = getTaskStatus(task);
+        
         if (recentlyCompleted.has(task.id)) {
              if (activeTab === 'current' && status === 'past') {
                  status = 'current';
              }
         }
+
         if (status !== activeTab && !(activeTab === 'current' && status === 'overdue')) return acc; 
         if (status !== activeTab && !recentlyCompleted.has(task.id)) return acc;
+        
         const dateKey = getDueDateLabel(task);
         const group = acc.get(dateKey) || [];
         group.push(task);
@@ -268,8 +266,6 @@ export default function TasksPage() {
             return;
         }
 
-        // [FIXED] Await the tempId and immediately update selectedTask to track it.
-        // This bridges the gap between 'temp_draft' and the 'real' ID.
         const tempId = await addTask(selectedTask);
         
         if (tempId) {
@@ -291,7 +287,6 @@ export default function TasksPage() {
         };
     }, []);
 
-    // ... (Return JSX same as before) ...
     return (
         <div
             className="min-h-screen py-6 px-4 sm:px-6 lg:px-12"
@@ -511,13 +506,6 @@ export default function TasksPage() {
                             <p className="text-[var(--color-text-secondary)] mt-2">
                                 Select a task from the list to view details or create a new one.
                             </p>
-                            <Button 
-                                onClick={handleAddTask}
-                                className="mt-6 bg-[var(--color-primary)] text-white"
-                            >
-                                <Plus size={18} className="mr-2" />
-                                Create Task
-                            </Button>
                         </div>
                     )}
                 </div>
