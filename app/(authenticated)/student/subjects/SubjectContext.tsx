@@ -1,3 +1,4 @@
+// app/(authenticated)/student/subjects/SubjectContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
@@ -58,6 +59,7 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
       instructor: 'Official Class', 
       repeatPattern: RepeatPattern.WEEKLY,
       repeatDays: cls.repeat_days || [],
+      repeatUntil: cls.repeat_until ? new Date(cls.repeat_until) : undefined, // [FIX] Map repeatUntil
       classType: cls.class_type,
     };
   }, []);
@@ -80,7 +82,6 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
       
       const isInstructor = profile?.account_type === 'instructor';
       let allEvents: CalendarEvent[] = [];
-
       const { data: personalEvents } = await supabase
         .from('events')
         .select('*')
@@ -124,7 +125,7 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
             classes (
               id, name, code, subject_code, 
               description, color, location,
-              start_time, end_time, repeat_days, class_type
+              start_time, end_time, repeat_days, class_type, repeat_until 
             )
           `)
           .eq('student_id', user.id)
