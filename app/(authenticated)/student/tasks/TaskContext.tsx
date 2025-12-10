@@ -8,7 +8,7 @@ import { useToast } from '@/app/context/ToastContext';
 
 interface TaskContextType {
   tasks: CalendarEvent[];
-  addTask: (newTask: CalendarEvent) => void;
+  addTask: (newTask: CalendarEvent) => Promise<string | null>; // [UPDATED] Returns tempId
   updateTask: (updatedTask: CalendarEvent) => void;
   deleteTask: (id: string) => void;
   toggleComplete: (id: string, isCompleted?: boolean, progress?: number) => void;
@@ -62,9 +62,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   const addTask = useCallback(async (newTask: CalendarEvent) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return null;
 
     const tempId = Date.now().toString();
+    // Optimistically add with temp ID
     setTasks(prev => [...prev, { ...newTask, id: tempId }]);
 
     const dbPayload = {
@@ -81,25 +82,33 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       subject_code: newTask.subjectCode,
     };
 
+    // Perform DB Insert
     const { data, error } = await supabase.from('events').insert([dbPayload]).select().single();
 
     if (error) {
       console.error('Error adding task:', error);
+      // Revert optimistic update
       setTasks(prev => prev.filter(t => t.id !== tempId));
       showToast("Error", `Failed to create task: ${error.message}`, "error");
+      return null;
     } else {
-      setTasks(prev => prev.map(t => t.id === tempId ? { ...newTask, id: data.id } : t));
+      // [CRITICAL FIX] Update the temp ID to the real ID, but PRESERVE any local edits (like slider progress)
+      // that happened while the save was in flight.
+      setTasks(prev => prev.map(t => t.id === tempId ? { ...t, id: data.id } : t));
       showToast("Success", "Task created successfully.", "success");
+      return tempId; // Return tempId so the UI can track it
     }
   }, [supabase, showToast]);
 
   const updateTask = useCallback(async (updatedTask: CalendarEvent) => {
-    if (!updatedTask.id || updatedTask.id.length < 10 || updatedTask.id === 'temp_draft') {
-       console.warn("Skipping update on invalid/temp ID:", updatedTask.id);
+    // 1. Optimistically update local state so the UI is smooth
+    setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+
+    // 2. [FIX] Skip DB update if ID is a temp ID (numeric timestamp) or 'temp_draft'
+    // This prevents "invalid input syntax for type uuid"
+    if (!updatedTask.id || updatedTask.id === 'temp_draft' || /^\d+$/.test(updatedTask.id)) {
        return;
     }
-
-    setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
 
     const dbPayload = {
       title: updatedTask.title,
@@ -117,12 +126,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     
     if (error) {
       console.error('Error updating task:', error);
+      // We don't revert here to keep the UI snappy, but we show a toast
       showToast("Update Failed", error.message || "Could not save changes.", "error");
     } 
   }, [supabase, showToast]);
 
   const deleteTask = useCallback(async (id: string) => {
     setTasks(prev => prev.filter(t => t.id !== id));
+
+    if (!id || id === 'temp_draft' || /^\d+$/.test(id)) return;
 
     const { error } = await supabase.from('events').delete().eq('id', id);
 
@@ -140,15 +152,18 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         const newCompleted = isCompleted !== undefined ? isCompleted : !task.completed;
         const newEstimate = `${progress !== undefined ? progress : (newCompleted ? 100 : 0)}%`;
         
-        supabase.from('events').update({ 
-          completed: newCompleted, 
-          task_estimate: newEstimate 
-        }).eq('id', id).then(({ error }) => {
-          if (error) {
-             console.error("Error toggling complete:", error);
-             showToast("Error", error.message, "error");
-          }
-        });
+        // [FIX] Only update DB if it's a real UUID
+        if (id && id !== 'temp_draft' && !/^\d+$/.test(id)) {
+            supabase.from('events').update({ 
+              completed: newCompleted, 
+              task_estimate: newEstimate 
+            }).eq('id', id).then(({ error }) => {
+              if (error) {
+                 console.error("Error toggling complete:", error);
+                 showToast("Error", error.message, "error");
+              }
+            });
+        }
 
         return { ...task, completed: newCompleted, taskEstimate: newEstimate };
       }
