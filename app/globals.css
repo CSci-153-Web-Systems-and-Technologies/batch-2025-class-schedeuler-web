@@ -1,32 +1,11 @@
+/* app/globals.css */
 @import "tailwindcss";
 
+/* 1. Define custom variant for class-based dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --primary: 225 73% 57%;
-  --primary-foreground: 0 0% 100%;
-  
-
-  --secondary: 252 53% 58%;
-  --secondary-foreground: 0 0% 100%;
-  
-  --background: 210 40% 98%; 
-  --foreground: 222 84% 5%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 84% 5%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 84% 5%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 84% 5%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
-  
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 225 73% 57%; 
-  
-  --radius: 0.5rem;
-
+  /* --- Your Custom App Colors --- */
   --color-primary: #4169e1;
   --color-primary-rgb: 65, 105, 225;
   --color-header-bg: #f9fafb;
@@ -36,8 +15,54 @@
   --color-text-header: #0f172a;
   --color-text-heading: #000000;
   --color-outline-btn: #c1c1c1;
+
+  /* --- Shadcn Light Variables --- */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
 }
 
+/* --- Shadcn Dark Variables (Restored) --- */
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+}
+
+/* --- Authenticated Layout Specifics --- */
 .authenticated {
   --color-primary: #4169e1;
   --color-bar-bg: #ffffff;
@@ -72,54 +97,24 @@
   --color-breadcrumb-separator: #d1d5db;
 }
 
-/* .dark {
-  
-  --background: 222 84% 5%;
-  --foreground: 210 40% 98%;
-  --card: 222 84% 5%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222 84% 5%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 225 73% 57%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 252 53% 58%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 217 33% 17%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 63% 31%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217 33% 17%;
-  --input: 217 33% 17%;
-  --ring: 225 73% 57%;
-} */
-
 @theme {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
-  
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
-  
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
-  
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
-  
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
-  
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
-  
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
 
@@ -179,11 +174,11 @@
   }
 }
 
+/* React Datepicker Custom Overrides */
 .rdp-button:hover:not([data-selected-single="true"]):not(.rdp-day_outside):not(.rdp-day_disabled) {
   background-color: #2F437F !important;
   color: white !important;
 }
-
 
 .rdp-button[data-selected-single="true"] {
   background-color: #4169E1 !important;
@@ -214,50 +209,18 @@
   color: white !important;
 }
 
-.rdp-button:hover:not([data-selected-single="true"]):not(.rdp-day_outside):not(.rdp-day_disabled) {
-  background-color: #2F437F !important;
-  color: white !important;
-}
-
-.rdp-button[data-selected-single="true"] {
-  background-color: #4169E1 !important;
-  color: white !important;
-}
-
 .rdp-button {
   border-radius: 9999px !important;
 }
 
-.rdp-button {
-  border-radius: 9999px !important;
-}
-
+/* Form Placeholders */
 input::placeholder,
 textarea::placeholder {
   color: var(--color-muted);
   opacity: 1; 
 }
 
-input::-webkit-input-placeholder,
-textarea::-webkit-input-placeholder {
-  color: var(--color-muted);
-}
-
-input::-moz-placeholder,
-textarea::-moz-placeholder {
-  color: var(--color-muted);
-  opacity: 1;
-}
-
-input::-ms-input-placeholder,
-textarea::-ms-input-placeholder {
-  color: var(--color-muted);
-}
-
-select option[value=""][disabled] {
-  color: var(--color-muted);
-}
-
+/* Animations */
 @keyframes slideInRight {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
@@ -276,35 +239,25 @@ select option[value=""][disabled] {
   animation: slideOutRight 0.3s ease-in forwards;
 }
 
+/* Print Styles */
 @media print {
-
-  aside, 
-  header, 
-  .export-panel, 
-  .add-subject-btn,
-  button, 
-  .breadcrumb,
-  nav {
+  aside, header, .export-panel, .add-subject-btn, button, .breadcrumb, nav {
     display: none !important;
   }
-
   .calendar-container {
     width: 100% !important;
     height: auto !important;
     border: none !important;
     overflow: visible !important;
   }
-
   * {
     color: black !important;
     background: white !important;
   }
-
   @page {
     margin: 0.5cm;
     size: landscape;
   }
-  
   main {
     padding: 0 !important;
     margin: 0 !important;
@@ -313,14 +266,9 @@ select option[value=""][disabled] {
 
 @layer utilities {
   @keyframes breathe {
-    0%, 100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.03); 
-    }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
   }
-
   .animate-breathe {
     animation: breathe 3s ease-in-out infinite;
   }

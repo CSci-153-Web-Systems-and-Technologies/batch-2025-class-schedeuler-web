@@ -1,4 +1,4 @@
-// components/ThemeContext.tsx
+// app/(authenticated)/components/ThemeContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -11,11 +11,8 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // [FIX] Initialize as 'light' to match Server-Side Rendering (SSR)
-  // This prevents the "Hydration Mismatch" error.
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   
-  // [FIX] New Effect: Read storage only after component mounts (Client-side)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme');
@@ -29,13 +26,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // 1. Save preference
     localStorage.setItem('theme', theme);
     
-    // 2. Force Body Background Color
+    // 2. Apply global class to HTML for Toasts and Portals
+    const root = document.documentElement;
     if (theme === 'dark') {
-        document.body.style.backgroundColor = '#212A35'; // Dark bg
+        root.classList.add('dark');
+        document.body.style.backgroundColor = '#212A35'; // Sync body bg
     } else {
-        document.body.style.backgroundColor = '#E2E8F0'; // Light bg
+        root.classList.remove('dark');
+        document.body.style.backgroundColor = '#E2E8F0'; // Sync body bg
     }
-    
+
+    // 3. CLEANUP: Reset when leaving authenticated routes (e.g. logging out)
+    return () => {
+        root.classList.remove('dark');
+        document.body.style.backgroundColor = '';
+    };
   }, [theme]);
 
   const toggleTheme = () => {
