@@ -1,4 +1,3 @@
-// app/(authenticated)/student/classes/page.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -9,6 +8,7 @@ import { createClient } from '@/utils/supabase/client';
 import { Loader2 } from 'lucide-react';
 import EventModal from '../calendar/components/EventModal';
 import { CalendarEvent, EventType, RepeatPattern } from '@/types/calendar';
+import { useSubjects } from '../subjects/SubjectContext'; 
 
 interface ClassData extends EnrolledClassProps {
   description?: string;
@@ -22,20 +22,21 @@ interface ClassData extends EnrolledClassProps {
 export default function StudentClassesPage() {
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0); 
   
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const supabase = createClient();
+  const { refreshSubjects } = useSubjects(); 
 
   const fetchClasses = useCallback(async () => {
-    await new Promise(resolve => setTimeout(resolve, 50)); 
+    await new Promise(resolve => setTimeout(resolve, 100)); 
     
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
-      const { data, error } = await supabase
+      const { data: enrollmentData, error } = await supabase
         .from('enrollments')
         .select(`
           status,
@@ -50,20 +51,35 @@ export default function StudentClassesPage() {
             repeat_days,
             class_type,
             schedule_settings,
-            location, 
-            profiles (name)
+            location,
+            instructor_id
           )
         `)
         .eq('student_id', user.id);
 
-      if (!error && data) {
-        const mappedClasses: ClassData[] = data.map((enrollment: any) => {
+      if (!error && enrollmentData) {
+        const instructorIds = [...new Set(enrollmentData
+            .map((e: any) => e.classes?.instructor_id)
+            .filter(Boolean))];
+
+        let profilesMap: Record<string, string> = {};
+
+        if (instructorIds.length > 0) {
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, name')
+                .in('id', instructorIds);
+            
+            profiles?.forEach(p => {
+                profilesMap[p.id] = p.name;
+            });
+        }
+
+        const mappedClasses: ClassData[] = enrollmentData.map((enrollment: any) => {
           const cls = enrollment.classes;
           if (!cls) return null;
 
-          const instructorName = Array.isArray(cls.profiles) 
-            ? cls.profiles[0]?.name 
-            : cls.profiles?.name;
+          const instructorName = profilesMap[cls.instructor_id] || 'Unknown Instructor';
 
           let scheduleStr = "Schedule TBD";
           if (cls.schedule_settings && typeof cls.schedule_settings === 'object') {
@@ -74,7 +90,7 @@ export default function StudentClassesPage() {
             id: cls.id,
             name: cls.name,
             code: cls.code,
-            instructor: instructorName || 'Unknown Instructor',
+            instructor: instructorName,
             schedule: scheduleStr,
             room: cls.location || 'Online', 
             status: enrollment.status,
@@ -89,10 +105,12 @@ export default function StudentClassesPage() {
         
         setClasses(mappedClasses);
         setRefreshKey(prev => prev + 1);
+        
+        refreshSubjects();
       }
     }
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, refreshSubjects]);
 
   useEffect(() => {
     fetchClasses();
@@ -106,44 +124,34 @@ export default function StudentClassesPage() {
       if (!user) return;
 
       channel = supabase
-        .channel('student_classes_updates')   
+        .channel('student_classes_page_updates')   
         .on(
           'postgres_changes',
-          {
-            event: '*', 
-            schema: 'public',
-            table: 'enrollments',
-            filter: `student_id=eq.${user.id}`, 
-          },
+          { event: '*', schema: 'public', table: 'enrollments', filter: `student_id=eq.${user.id}` },
           () => {
-            console.log("Enrollment update detected, refreshing...");
+            console.log("Realtime: Enrollment update detected");
             fetchClasses();
           }
         )
-        
-        .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'notifications',
-              filter: `user_id=eq.${user.id}`,
-            },
-            (payload) => {
-                if (payload.new.title.includes('Enrollment')) {
-                    console.log("Enrollment notification received, triggering class refresh...");
-                    fetchClasses();
-                }
-            }
-        )
-
         .on(
           'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'classes',
-          },
+          { event: 'DELETE', schema: 'public', table: 'classes' },
+          (payload) => {
+             console.log("Realtime: Class deleted, checking if enrolled...");
+             setClasses(prev => {
+                 const wasEnrolled = prev.some(c => c.id === payload.old.id);
+                 if (wasEnrolled) {
+                     const newClasses = prev.filter(c => c.id !== payload.old.id);
+                     refreshSubjects();
+                     return newClasses;
+                 }
+                 return prev;
+             });
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'classes' },
           (payload) => {
             setClasses(currentClasses => {
                 const isRelevant = currentClasses.some(c => c.id === payload.new.id);
@@ -160,7 +168,7 @@ export default function StudentClassesPage() {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [supabase, fetchClasses]);
+  }, [supabase, fetchClasses, refreshSubjects]);
 
   const handleClassClick = (cls: ClassData) => {
     const now = new Date();

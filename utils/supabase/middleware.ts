@@ -1,3 +1,4 @@
+// utils/supabase/middleware.ts
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -30,6 +31,7 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
 
+  // [UPDATED] Added footer pages (about, support, privacy, terms) to public routes list
   const isPublicRoute = 
     path === '/' ||
     path.startsWith('/landing') || 
@@ -37,7 +39,11 @@ export async function updateSession(request: NextRequest) {
     path.startsWith('/signup') || 
     path.startsWith('/error') ||
     path.startsWith('/auth/callback') ||
-    path.startsWith('/select-account-type');
+    path.startsWith('/select-account-type') ||
+    path.startsWith('/about') ||
+    path.startsWith('/support') ||
+    path.startsWith('/privacy') ||
+    path.startsWith('/terms');
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
@@ -73,7 +79,18 @@ export async function updateSession(request: NextRequest) {
             return NextResponse.redirect(new URL('/error', request.url));
         }
         
-        if (isPublicRoute && !path.startsWith('/error') && !path.startsWith('/select-account-type')) {
+        // [UPDATED] Logic to determine if we should redirect logged-in users to dashboard.
+        // We allow them to stay on public pages like About, Support, Privacy, Terms, Error, and Select Account.
+        // We ONLY redirect them if they try to hit Landing, Login, Signup, or Root.
+        if (
+            isPublicRoute && 
+            !path.startsWith('/error') && 
+            !path.startsWith('/select-account-type') &&
+            !path.startsWith('/about') &&
+            !path.startsWith('/support') &&
+            !path.startsWith('/privacy') &&
+            !path.startsWith('/terms')
+        ) {
              const dest = userRole === 'instructor' ? '/instructor/dashboard' : '/student/dashboard';
              return NextResponse.redirect(new URL(dest, request.url));
         }

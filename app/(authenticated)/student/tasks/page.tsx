@@ -281,7 +281,7 @@ export default function TasksPage() {
             style={{ backgroundColor: "var(--color-main-bg)" }}
         >
             <AppBreadcrumb />
-            <div className="flex flex-col lg:flex-row gap-6">              
+            <div className="flex flex-col lg:flex-row gap-6 mt-5">              
                 <div className="w-full lg:w-1/2 xl:w-2/5 p-6 rounded-2xl shadow-lg" 
                     style={{ backgroundColor: "var(--color-components-bg)" }}>
                     

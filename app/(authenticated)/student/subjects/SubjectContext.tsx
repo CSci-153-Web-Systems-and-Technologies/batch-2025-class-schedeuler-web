@@ -161,8 +161,7 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
       if (!user) return;
 
       channel = supabase
-        .channel('universal_subject_updates')
-        
+        .channel('subject_context_updates')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'events', filter: `user_id=eq.${user.id}` },
@@ -171,7 +170,7 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
 
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'enrollments' },
+          { event: '*', schema: 'public', table: 'enrollments', filter: `student_id=eq.${user.id}` },
           () => fetchSubjects(true)
         )
         
@@ -184,29 +183,15 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
                      fetchSubjects(true);
                  }
              }
-             
              else if (payload.eventType === 'UPDATE') {
                  const updatedClassId = `class_${payload.new.id}`;
-                 
                  const isMyClass = payload.new.instructor_id === user.id;
                  const isTracked = subjectsRef.current.some(s => s.id === updatedClassId);
 
                  if (isMyClass || isTracked) {
-                     const newEvent = mapClassToEvent(payload.new);
-                     setSubjects(prev => {
-                         const exists = prev.some(s => s.id === updatedClassId);
-                         if (exists) {
-                             return prev.map(s => s.id === updatedClassId ? newEvent : s);
-                         } else if (isMyClass) {
-                             return [...prev, newEvent];
-                         }
-                         return prev;
-                     });
-                     
                      fetchSubjects(true); 
                  }
              }
-             
              else if (payload.eventType === 'DELETE') {
                  const deletedId = `class_${payload.old.id}`;
                  setSubjects(prev => prev.filter(s => s.id !== deletedId));
@@ -221,7 +206,7 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [supabase, fetchSubjects, mapClassToEvent]);
+  }, [supabase, fetchSubjects]);
 
 
   const addSubject = useCallback(async (newSubject: CalendarEvent) => {

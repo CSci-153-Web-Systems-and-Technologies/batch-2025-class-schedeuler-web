@@ -1,7 +1,6 @@
-// app/(authenticated)/instructor/dashboard/components/DashboardStats.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { BookOpen, Users, ListTodo, AlertCircle } from "lucide-react";
 import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
 import { useSubjects } from "@/app/(authenticated)/student/subjects/SubjectContext";
@@ -9,7 +8,6 @@ import { useTasks } from "@/app/(authenticated)/student/tasks/TaskContext";
 import { createClient } from "@/utils/supabase/client";
 import { generateRecurringEvents } from "@/utils/calendarUtils";
 import { EventType } from "@/types/calendar";
-import moment from "moment";
 
 interface StatCardProps {
   title: string;
@@ -29,7 +27,6 @@ const StatCard: React.FC<StatCardProps> = ({
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
   
-  // Use a default for light mode if not provided, or ensure background is set
   const lightBg = badgeSettings?.light.bg || "#F3F4F6";
   const lightText = badgeSettings?.light.text || "#374151";
 
@@ -72,50 +69,91 @@ export default function DashboardStats() {
   const [totalStudents, setTotalStudents] = useState(0);
   const [conflictCount, setConflictCount] = useState(0);
 
+  // Calculated from Context (which is already realtime for subjects)
   const classesThisWeek = React.useMemo(() => {
     const now = new Date();
     const events = generateRecurringEvents(subjects, now, 'week'); 
-    
     return events.filter(e => e.type === EventType.SUBJECT).length;
   }, [subjects]);
 
   const pendingTasks = tasks.filter(t => t.type === EventType.TASK && !t.completed).length;
 
+  const fetchStats = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Fetch classes owned by instructor
+    const { data: classes } = await supabase.from('classes').select('id').eq('instructor_id', user.id);
+    
+    if (classes && classes.length > 0) {
+      const classIds = classes.map(c => c.id);
+      
+      const { data: enrollments, count: studentCount } = await supabase
+        .from('enrollments')
+        .select('conflict_report', { count: 'exact' })
+        .in('class_id', classIds)
+        .eq('status', 'approved');
+      
+      setTotalStudents(studentCount || 0);
+
+      if (enrollments) {
+          const conflicts = enrollments.filter(e => 
+              e.conflict_report && 
+              Array.isArray(e.conflict_report) && 
+              e.conflict_report.length > 0
+          ).length;
+          setConflictCount(conflicts);
+      } else {
+          setConflictCount(0);
+      }
+    } else {
+        setTotalStudents(0);
+        setConflictCount(0);
+    }
+  }, [supabase]);
+
+  // Initial Fetch
   useEffect(() => {
-    async function fetchStats() {
+    fetchStats();
+  }, [fetchStats, subjects]); // Re-fetch if subjects list changes (e.g. deletion)
+
+  // [NEW] Robust Realtime Listener for Stats
+  useEffect(() => {
+    let channel: any;
+
+    const setupRealtime = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: classes } = await supabase.from('classes').select('id').eq('instructor_id', user.id);
-      
-      if (classes && classes.length > 0) {
-        const classIds = classes.map(c => c.id);
-        
-        const { data: enrollments, count: studentCount } = await supabase
-          .from('enrollments')
-          .select('conflict_report', { count: 'exact' })
-          .in('class_id', classIds)
-          .eq('status', 'approved');
-        
-        setTotalStudents(studentCount || 0);
+      channel = supabase
+        .channel('dashboard_stats_updates')
+        // 1. Listen for Enrollment changes (New student / Student left)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'enrollments' }, // We rely on logic in fetchStats to filter by my classes
+          () => {
+             console.log("Stats: Enrollment changed, refetching...");
+             fetchStats();
+          }
+        )
+        // 2. Listen for Class Deletions/Additions directly
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'classes', filter: `instructor_id=eq.${user.id}` },
+          () => {
+             console.log("Stats: Class changed, refetching...");
+             fetchStats();
+          }
+        )
+        .subscribe();
+    };
 
-        if (enrollments) {
-            const conflicts = enrollments.filter(e => 
-                e.conflict_report && 
-                Array.isArray(e.conflict_report) && 
-                e.conflict_report.length > 0
-            ).length;
-            setConflictCount(conflicts);
-        } else {
-            setConflictCount(0);
-        }
-      } else {
-          setTotalStudents(0);
-          setConflictCount(0);
-      }
-    }
-    fetchStats();
-  }, [supabase, subjects]); 
+    setupRealtime();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [supabase, fetchStats]);
 
   const isConflict = conflictCount > 0;
   

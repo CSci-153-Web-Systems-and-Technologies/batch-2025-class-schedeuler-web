@@ -12,27 +12,25 @@ import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
 import { User, Mail, BadgeCheck, Loader2, Save, Camera, Trash2 } from 'lucide-react';
 import { useUser } from '@/app/context/UserContext'; 
+import { getInitialsWithoutMiddle } from '@/utils/stringUtils';
 
 export default function ProfilePage() {
   const [updating, setUpdating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [name, setName] = useState("");
   
-  // Use global context for instant updates
   const { profile, loading, refreshProfile } = useUser();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
   const { showToast } = useToast();
 
-  // Sync local state when profile loads
   useEffect(() => {
     if (profile) {
       setName(profile.name || "");
     }
   }, [profile]);
 
-  // --- HANDLE AVATAR UPLOAD ---
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!profile) return;
     try {
@@ -46,7 +44,6 @@ export default function ProfilePage() {
       const fileName = `${profile.id}-${Math.random()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      // Upload new image
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file);
@@ -57,7 +54,6 @@ export default function ProfilePage() {
         .from('avatars')
         .getPublicUrl(filePath);
 
-      // Update profile with new URL
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
@@ -66,8 +62,6 @@ export default function ProfilePage() {
       if (updateError) throw updateError;
 
       showToast("Success", "Profile picture updated!", "success");
-      
-      // Update global state immediately
       await refreshProfile();
 
     } catch (error: any) {
@@ -77,13 +71,11 @@ export default function ProfilePage() {
     }
   };
 
-  // --- HANDLE REMOVE AVATAR ---
   const handleRemoveAvatar = async () => {
     if (!profile) return;
     try {
         setUploading(true);
 
-        // Update profile to remove avatar URL
         const { error } = await supabase
             .from('profiles')
             .update({ avatar_url: null })
@@ -92,8 +84,6 @@ export default function ProfilePage() {
         if (error) throw error;
 
         showToast("Removed", "Profile photo removed.", "success");
-        
-        // Update global state immediately
         await refreshProfile();
 
     } catch (error: any) {
@@ -103,7 +93,6 @@ export default function ProfilePage() {
     }
   };
 
-  // --- HANDLE NAME UPDATE ---
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
@@ -122,15 +111,6 @@ export default function ProfilePage() {
       showToast("Success", "Profile updated successfully.", "success");
       await refreshProfile();
     }
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   if (loading) {
@@ -156,7 +136,7 @@ export default function ProfilePage() {
                 <Avatar className="h-32 w-32 mb-4 border-4 border-[var(--color-components-bg)] shadow-lg transition-opacity group-hover:opacity-80">
                   <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
                   <AvatarFallback className="text-4xl bg-blue-100 text-blue-600">
-                    {getInitials(name)}
+                    {getInitialsWithoutMiddle(name)}
                   </AvatarFallback>
                 </Avatar>
                 
@@ -193,7 +173,6 @@ export default function ProfilePage() {
                     Change Photo
                 </Button>
 
-                {/* [NEW] Remove Photo Button - Only shows if avatar exists */}
                 {profile?.avatar_url && (
                     <Button 
                         variant="outline"

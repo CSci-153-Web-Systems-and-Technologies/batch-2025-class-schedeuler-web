@@ -132,7 +132,6 @@ export default function EditClassModal({ isOpen, onClose, classData, onClassUpda
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           
-          {/* [NEW] Join Code Display */}
           <div className="bg-[var(--color-hover)] p-4 rounded-xl flex items-center justify-between border border-[var(--color-primary)] border-dashed">
             <div>
               <p className="text-xs text-[var(--color-text-secondary)] uppercase font-bold tracking-wider">Join Code</p>
@@ -187,7 +186,6 @@ export default function EditClassModal({ isOpen, onClose, classData, onClassUpda
                 </div>
             </div>
 
-            {/* SCHEDULE SECTION */}
             <div className="p-4 rounded-lg bg-[var(--color-bar-bg)] border border-[var(--color-border)]">
                 <label className="block text-sm font-bold text-[var(--color-text-primary)] mb-3">
                     Weekly Schedule
