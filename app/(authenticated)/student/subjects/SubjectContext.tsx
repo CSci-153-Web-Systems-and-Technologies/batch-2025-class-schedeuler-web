@@ -167,18 +167,11 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
           { event: '*', schema: 'public', table: 'events', filter: `user_id=eq.${user.id}` },
           () => fetchSubjects(true)
         )
+
         .on(
           'postgres_changes',
-          { 
-            event: '*', 
-            schema: 'public', 
-            table: 'enrollments',
-            filter: `student_id=eq.${user.id}` 
-          },
-          (payload) => {
-             console.log("Realtime: Enrollment changed", payload);
-             fetchSubjects(true);
-          }
+          { event: '*', schema: 'public', table: 'enrollments', filter: `student_id=eq.${user.id}` },
+          () => fetchSubjects(true)
         )
         
         .on(
@@ -190,19 +183,15 @@ export function SubjectProvider({ children }: { children: React.ReactNode }) {
                      fetchSubjects(true);
                  }
              }
-             
              else if (payload.eventType === 'UPDATE') {
                  const updatedClassId = `class_${payload.new.id}`;
-                 
                  const isMyClass = payload.new.instructor_id === user.id;
                  const isTracked = subjectsRef.current.some(s => s.id === updatedClassId);
 
                  if (isMyClass || isTracked) {
-                     console.log("Realtime: Tracked class updated", payload.new.name);
                      fetchSubjects(true); 
                  }
              }
-             
              else if (payload.eventType === 'DELETE') {
                  const deletedId = `class_${payload.old.id}`;
                  setSubjects(prev => prev.filter(s => s.id !== deletedId));

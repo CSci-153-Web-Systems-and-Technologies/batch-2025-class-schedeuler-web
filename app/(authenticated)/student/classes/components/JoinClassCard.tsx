@@ -1,4 +1,3 @@
-// app/(authenticated)/student/classes/components/JoinClassCard.tsx
 "use client";
 
 import React, { useState } from 'react';
@@ -22,7 +21,7 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
   const supabase = createClient();
   const { showToast } = useToast();
   const { theme } = useThemeContext();
-  const { subjects: currentSchedule, deleteSubject } = useSubjects();
+  const { subjects: currentSchedule, deleteSubject, refreshSubjects } = useSubjects(); // [NEW] Get refreshSubjects
 
   const generateConflictReport = (conflicts: CalendarEvent[]): string[] => {
     if (!conflicts || conflicts.length === 0) return [];
@@ -95,6 +94,8 @@ const JoinClassCard: React.FC<{ onJoinSuccess?: () => void }> = ({ onJoinSuccess
 
             showToast('Success', `Request sent to join "${className}"`, 'success');
             setClassCode(''); 
+            refreshSubjects();
+
             if (onJoinSuccess) onJoinSuccess(); 
         }
     } catch (err: any) {
