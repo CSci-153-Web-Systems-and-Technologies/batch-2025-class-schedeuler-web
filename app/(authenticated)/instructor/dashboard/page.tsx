@@ -1,108 +1,60 @@
-"use client";
+import React from "react";
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
+import InstructorDashboardClient from "./components/InstructorDashboardClient";
 
-import React, { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useToast } from "@/app/context/ToastContext";
-import { Plus } from "lucide-react";
-import { Button } from "@/app/components/ui/Button";
-import AppBreadcrumb from "@/app/components/ui/AppBreadCrumb";
-import Greeting from "@/app/(authenticated)/components/Greeting";
-import DashboardStats from "./components/DashboardStats";
-import InstructorClasses from "./components/InstructorClasses";
-import InstructorTasks from "./components/InstructorTasks";
-import CalendarDisplay from "@/app/(authenticated)/components/CalendarDisplay";
-import CreateClassModal from "./components/CreateClassModal";
+export default async function InstructorDashboard() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-import { useSubjects } from "@/app/(authenticated)/student/subjects/SubjectContext";
+  if (!user) {
+    redirect('/login');
+  }
 
-export default function InstructorDashboard() {
-  const [userName, setUserName] = useState("Instructor");
-  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
-  
-  const supabase = createClient();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { showToast } = useToast();
-  
-  const { refreshSubjects } = useSubjects();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name")
+    .eq("id", user.id)
+    .single();
 
-  useEffect(() => {
-    const toastType = searchParams.get('toast');
-    if (toastType) {
-      if (toastType === 'login') showToast("Welcome Back!", "Logged in successfully.", "success");
-      if (toastType === 'signup') showToast("Welcome!", "Instructor account created.", "success");
-      router.replace('/instructor/dashboard');
+  const userName = profile?.name ? profile.name.split(" ")[0] : "Instructor";
+
+  let totalStudents = 0;
+  let conflictCount = 0;
+
+  const { data: classes } = await supabase.from('classes').select('id').eq('instructor_id', user.id);
+    
+  if (classes && classes.length > 0) {
+    const classIds = classes.map(c => c.id);
+    
+    const { count } = await supabase
+      .from('enrollments')
+      .select('*', { count: 'exact', head: true })
+      .in('class_id', classIds)
+      .eq('status', 'approved');
+    
+    totalStudents = count || 0;
+
+    const { data: conflictingEnrollments } = await supabase
+        .from('enrollments')
+        .select('conflict_report')
+        .in('class_id', classIds)
+        .eq('status', 'approved')
+        .not('conflict_report', 'is', null); 
+
+    if (conflictingEnrollments) {
+        conflictCount = conflictingEnrollments.filter(e => 
+            e.conflict_report && 
+            Array.isArray(e.conflict_report) && 
+            e.conflict_report.length > 0
+        ).length;
     }
-  }, [searchParams, router, showToast]);
-
-  useEffect(() => {
-    async function getUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("name")
-        .eq("id", user.id)
-        .single();
-      
-      if (profile?.name) {
-        setUserName(profile.name.split(" ")[0]);
-      }
-    }
-    getUser();
-  }, [supabase]);
+  }
 
   return (
-    <div
-      className="min-h-screen py-6 px-4 sm:px-6 lg:px-8"
-      style={{ backgroundColor: "var(--color-main-bg)" }}
-    >
-      <AppBreadcrumb />
-
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <Greeting userName={userName} />
-        
-        <Button 
-          onClick={() => setIsClassModalOpen(true)}
-          className="bg-[#4169E1] hover:bg-[#3557C5] text-white font-semibold px-6 py-5 rounded-full shadow-lg transition-all hover:scale-105"
-        >
-          Create Class
-          <Plus className="ml-2 h-5 w-5" strokeWidth={3} />
-        </Button>
-      </div>
-
-      <DashboardStats />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-        
-        <div className="lg:col-span-2 min-h-[500px]">
-          <InstructorClasses />
-        </div>
-
-        <div className="flex flex-col gap-6">
-          
-          <div 
-            className="p-4 rounded-2xl border border-[var(--color-border)] shadow-sm"
-            style={{ backgroundColor: "var(--color-components-bg)" }}
-          >
-            <CalendarDisplay />
-          </div>
-
-          <div className="flex-1">
-            <InstructorTasks />
-          </div>
-        </div>
-      </div>
-
-      <CreateClassModal 
-        isOpen={isClassModalOpen} 
-        onClose={() => setIsClassModalOpen(false)} 
-        onClassCreated={() => {
-            refreshSubjects(); 
-        }}
-      />
-    </div>
+    <InstructorDashboardClient 
+      userName={userName} 
+      initialStats={{ totalStudents, conflictCount }} 
+    />
   );
 }
