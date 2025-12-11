@@ -7,6 +7,13 @@ import { useToast } from '@/app/context/ToastContext';
 import { Button } from "@/components/ui/Button";
 import { Label } from "@/components/ui/Label";
 import { Input } from "@/components/ui/Input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/app/components/ui/Select";
 import { useSubjects } from '@/app/(authenticated)/student/subjects/SubjectContext';
 import { CalendarEvent, EventType, RepeatPattern } from '@/types/calendar';
 import { generateRecurringEvents } from '@/utils/calendarUtils';
@@ -99,7 +106,8 @@ const findPatternSlots = (
     allBusyEvents: { event: CalendarEvent, isInstructor: boolean, studentId?: string }[], 
     durationMinutes: number,
     poolDays: number[], 
-    sessionsPerWeek: number
+    sessionsPerWeek: number,
+    timePreference: 'any' | 'morning' | 'afternoon'
 ): Suggestion[] => {
     const suggestions: Suggestion[] = [];
     const intervalMinutes = 30;
@@ -123,8 +131,18 @@ const findPatternSlots = (
 
     const dayCombinations = getCombinations(poolDays, sessionsPerWeek);
 
-    let baseTime = set(now, { hours: 7, minutes: 0, seconds: 0, milliseconds: 0 }); 
-    const endTimeLimit = set(now, { hours: 20, minutes: 0 }); 
+    let startHour = 7; 
+    let endHour = 20;
+
+    if (timePreference === 'morning') {
+        endHour = 12;
+    } else if (timePreference === 'afternoon') {
+        startHour = 13; 
+        endHour = 20; 
+    }
+
+    let baseTime = set(now, { hours: startHour, minutes: 0, seconds: 0, milliseconds: 0 }); 
+    const endTimeLimit = set(now, { hours: endHour, minutes: 0 }); 
 
     while (addMinutes(baseTime, durationMinutes) <= endTimeLimit) {
         const timeSlotStartStr = format(baseTime, 'HH:mm'); 
@@ -183,6 +201,7 @@ export default function SuggestTimeModal({ isOpen, onClose, classData, onSchedul
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [threshold, setThreshold] = useState(50);
   const [isMergedView, setIsMergedView] = useState(false);
+  const [timePreference, setTimePreference] = useState<'any' | 'morning' | 'afternoon'>('any');
 
   const supabase = createClient();
   const { showToast } = useToast();
@@ -200,6 +219,7 @@ export default function SuggestTimeModal({ isOpen, onClose, classData, onSchedul
           }
           setSuggestions([]); 
           setIsMergedView(false);
+          setTimePreference('any');
       }
   }, [isOpen, classData]);
 
@@ -239,11 +259,11 @@ export default function SuggestTimeModal({ isOpen, onClose, classData, onSchedul
             });
         });
 
-        let freeSlots = findPatternSlots(allBusyEvents, duration, dayPool, sessionsPerWeek);
+        let freeSlots = findPatternSlots(allBusyEvents, duration, dayPool, sessionsPerWeek, timePreference);
 
         if (freeSlots.length === 0 && sessionsPerWeek > 1) {
             const totalDuration = duration * sessionsPerWeek;
-            const mergedSlots = findPatternSlots(allBusyEvents, totalDuration, dayPool, 1);
+            const mergedSlots = findPatternSlots(allBusyEvents, totalDuration, dayPool, 1, timePreference);
             
             if (mergedSlots.length > 0) {
                 freeSlots = mergedSlots.map(s => ({
@@ -268,7 +288,7 @@ export default function SuggestTimeModal({ isOpen, onClose, classData, onSchedul
     } finally {
         setLoading(false);
     }
-  }, [classData, duration, dayPool, sessionsPerWeek, instructorEvents, supabase, showToast]);
+  }, [classData, duration, dayPool, sessionsPerWeek, instructorEvents, supabase, showToast, timePreference]);
 
   const handleCreateProposal = async (suggestion: Suggestion) => {
     setLoading(true);
@@ -361,6 +381,23 @@ export default function SuggestTimeModal({ isOpen, onClose, classData, onSchedul
                         className="mt-1 bg-[var(--color-bar-bg)] text-[var(--color-text-primary)]"
                     />
                 </div>
+            </div>
+
+            <div>
+                <Label className="text-[var(--color-text-primary)] mb-2 block">Time Preference</Label>
+                <Select 
+                    value={timePreference} 
+                    onValueChange={(val: any) => setTimePreference(val)}
+                >
+                    <SelectTrigger className="w-full bg-[var(--color-bar-bg)] border-[var(--color-border)] text-[var(--color-text-primary)]">
+                        <SelectValue placeholder="Select preference" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="any">Any Time (7 AM - 8 PM)</SelectItem>
+                        <SelectItem value="morning">Morning Only (7 AM - 12 PM)</SelectItem>
+                        <SelectItem value="afternoon">Afternoon Only (1 PM - 8 PM)</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             <div>
