@@ -1,4 +1,3 @@
-// app/(authenticated)/instructor/dashboard/components/CreateClassModal.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -17,7 +16,6 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/DatePickerStyles.css';
 
-// [NEW] Imports for Conflict Detection
 import { checkForConflicts } from '@/utils/calendarUtils';
 import { useSubjects } from '@/app/(authenticated)/student/subjects/SubjectContext';
 import { CalendarEvent, EventType, RepeatPattern } from '@/types/calendar';
@@ -57,7 +55,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
     startTime: '09:00',
     endTime: '10:30',
     repeatDays: [] as number[],
-    repeatUntil: null as Date | null, // [NEW] Repeat Until State
+    repeatUntil: null as Date | null,
   });
   
   const [loading, setLoading] = useState(false);
@@ -147,7 +145,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
         end: endDate,
         repeatPattern: RepeatPattern.WEEKLY,
         repeatDays: formData.repeatDays,
-        repeatUntil: formData.repeatUntil || undefined // [NEW] Pass repeatUntil to conflict check
+        repeatUntil: formData.repeatUntil || undefined
     };
 
     if (checkForConflicts(tempEvent, subjects)) {
@@ -182,7 +180,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
               start_time: formData.startTime,
               end_time: formData.endTime,
               repeat_days: formData.repeatDays,
-              repeat_until: formData.repeatUntil, // [NEW] Save to DB
+              repeat_until: formData.repeatUntil,
               schedule_settings: { displayString },
               status: 'Active'
             }
@@ -328,7 +326,8 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
                             type="time" 
                             value={formData.startTime}
                             onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                            className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                            // [FIX] Added dark mode icon filter to make it visible
+                            className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none dark:[&::-webkit-calendar-picker-indicator]:filter dark:[&::-webkit-calendar-picker-indicator]:invert"
                         />
                     </div>
                     <div>
@@ -337,7 +336,8 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
                             type="time" 
                             value={formData.endTime}
                             onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                            className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                            // [FIX] Added dark mode icon filter to make it visible
+                            className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none dark:[&::-webkit-calendar-picker-indicator]:filter dark:[&::-webkit-calendar-picker-indicator]:invert"
                         />
                     </div>
                 </div>
@@ -350,6 +350,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
                         dateFormat="MMMM d, yyyy"
                         isClearable
                         placeholderText="Forever"
+                        wrapperClassName='w-full'
                         className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
                     />
                 </div>
