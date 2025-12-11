@@ -16,7 +16,7 @@ const PublicHeader = ({ className }: PublicHeaderProps) => {
   const [scrolled, setScrolled] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -28,7 +28,9 @@ const PublicHeader = ({ className }: PublicHeaderProps) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         setIsAuthenticated(!!session);
       } catch (error) {
         console.error("Auth check failed", error);
@@ -40,15 +42,17 @@ const PublicHeader = ({ className }: PublicHeaderProps) => {
   }, [supabase]);
 
   return (
-    <header className={cn(
-      "header-glass", 
-      scrolled && "backdrop-blur-lg shadow-lg",
-      className
-    )}>
+    <header
+      className={cn(
+        "header-glass",
+        scrolled && "backdrop-blur-lg shadow-lg",
+        className
+      )}
+    >
       <Link href="/" className="flex items-center gap-2 cursor-pointer">
         <Image src="/icons/schedule.png" alt="Logo" width={32} height={32} />
         <div className="flex flex-col">
-          <h1 className="text-lg sm:text-xl font-bold text-gradient">
+          <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             Class SchedEuler
           </h1>
           <p className="text-[10px] sm:text-xs font-bold text-muted-foreground">
@@ -66,7 +70,7 @@ const PublicHeader = ({ className }: PublicHeaderProps) => {
           >
             <Link href="/login">Login</Link>
           </Button>
-          
+
           <Button
             asChild
             className="rounded-2xl hover:scale-105 transition-transform hidden sm:inline-flex"

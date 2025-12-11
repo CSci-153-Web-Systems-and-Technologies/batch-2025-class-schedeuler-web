@@ -14,7 +14,8 @@ const NAV_LINKS: NavLink[] = [
   { href: "#benefits", label: "Benefits" },
 ];
 
-const NAV_LINK_CLASSES = "px-2 py-[6px] md:py-[2px] rounded-xl hover:bg-primary/10 transition-colors";
+const NAV_LINK_CLASSES =
+  "px-2 py-[6px] md:py-[2px] rounded-xl hover:bg-primary/10 transition-colors";
 
 const LandingHeader = ({ className }: SectionProps) => {
   const [scrolled, setScrolled] = useState(false);
@@ -29,7 +30,10 @@ const LandingHeader = ({ className }: SectionProps) => {
 
   const closeMenu = () => setMenuOpen(false);
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+  const handleNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string
+  ) => {
     e.preventDefault();
     scrollToElement(href);
     closeMenu();
@@ -42,10 +46,12 @@ const LandingHeader = ({ className }: SectionProps) => {
   };
 
   const renderNavLinks = (links: NavLink[], mobile: boolean = false) => (
-    <ul className={cn(
-      "text-foreground",
-      mobile ? "flex flex-col gap-2" : "flex gap-4 md:gap-1"
-    )}>
+    <ul
+      className={cn(
+        "text-foreground",
+        mobile ? "flex flex-col gap-2" : "flex gap-4 md:gap-1"
+      )}
+    >
       {links.map((link) => (
         <li key={link.href}>
           <a
@@ -65,18 +71,11 @@ const LandingHeader = ({ className }: SectionProps) => {
 
   const renderAuthButtons = () => (
     <div className="hidden md:flex gap-2">
-      <Button 
-        asChild
-        variant="outline" 
-        className="rounded-2xl hover:scale-110"
-      >
+      <Button asChild variant="outline" className="rounded-2xl hover:scale-110">
         <Link href="/login">Login</Link>
       </Button>
-      
-      <Button 
-        asChild
-        className="hidden lg:block rounded-2xl hover:scale-110"
-      >
+
+      <Button asChild className="hidden lg:block rounded-2xl hover:scale-110">
         <Link href="/signup">Sign Up</Link>
       </Button>
     </div>
@@ -87,12 +86,12 @@ const LandingHeader = ({ className }: SectionProps) => {
       <nav className="p-4">
         {renderNavLinks(NAV_LINKS, true)}
         <div className="mt-4 flex flex-col gap-2 pt-4 border-t border-border">
-            <Button asChild variant="outline" className="w-full rounded-xl">
-                <Link href="/login">Login</Link>
-            </Button>
-            <Button asChild className="w-full rounded-xl">
-                <Link href="/signup">Sign Up</Link>
-            </Button>
+          <Button asChild variant="outline" className="w-full rounded-xl">
+            <Link href="/login">Login</Link>
+          </Button>
+          <Button asChild className="w-full rounded-xl">
+            <Link href="/signup">Sign Up</Link>
+          </Button>
         </div>
       </nav>
     </div>
@@ -119,16 +118,15 @@ const LandingHeader = ({ className }: SectionProps) => {
   );
 
   return (
-    <header className={cn(
-      "header-glass",
-      scrolled && "backdrop-blur-lg shadow-lg",
-      className
-    )}>
+    <header
+      className={cn(
+        "header-glass",
+        scrolled && "backdrop-blur-lg shadow-lg",
+        className
+      )}
+    >
       <div
-        className={cn(
-          "flex items-center gap-2",
-          scrolled && "cursor-pointer"
-        )}
+        className={cn("flex items-center gap-2", scrolled && "cursor-pointer")}
         onClick={handleLogoClick}
         role={scrolled ? "button" : undefined}
         tabIndex={scrolled ? 0 : -1}
@@ -140,7 +138,7 @@ const LandingHeader = ({ className }: SectionProps) => {
       >
         <Image src="/icons/schedule.png" alt="Logo" width={32} height={32} />
         <div className="flex flex-col">
-          <h1 className="text-lg sm:text-xl font-bold text-gradient">
+          <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             Class SchedEuler
           </h1>
           <p className="text-[10px] sm:text-xs font-bold text-muted-foreground">
@@ -149,9 +147,7 @@ const LandingHeader = ({ className }: SectionProps) => {
         </div>
       </div>
 
-      <nav className="hidden md:block">
-        {renderNavLinks(NAV_LINKS)}
-      </nav>
+      <nav className="hidden md:block">{renderNavLinks(NAV_LINKS)}</nav>
 
       {renderHamburgerButton()}
 
