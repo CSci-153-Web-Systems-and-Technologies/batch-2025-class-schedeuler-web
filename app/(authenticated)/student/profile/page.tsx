@@ -13,11 +13,13 @@ import { useToast } from '@/app/context/ToastContext';
 import { User, Mail, BadgeCheck, Loader2, Save, Camera, Trash2 } from 'lucide-react';
 import { useUser } from '@/app/context/UserContext'; 
 import { getInitialsWithoutMiddle } from '@/utils/stringUtils';
+import ImageCropper from '@/app/components/ui/ImageCropper';
 
 export default function ProfilePage() {
   const [updating, setUpdating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [name, setName] = useState("");
+  const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null); // [NEW]
   
   const { profile, loading, refreshProfile } = useUser();
   
@@ -31,43 +33,54 @@ export default function ProfilePage() {
     }
   }, [profile]);
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!profile) return;
-    try {
-      setUploading(true);
-      if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('You must select an image to upload.');
-      }
-
+  const onFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.id}-${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const reader = new FileReader();
+      reader.addEventListener('load', () => 
+        setSelectedImageSrc(reader.result?.toString() || null)
+      );
+      reader.readAsDataURL(file);
+    }
+  };
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
+  const handleUploadCroppedImage = async (croppedBlob: Blob) => {
+    if (!profile) return;
+    
+    try {
+        setUploading(true);
+        setSelectedImageSrc(null);
 
-      if (uploadError) throw uploadError;
+        const file = new File([croppedBlob], `avatar-${Date.now()}.jpg`, { type: "image/jpeg" });
+        const fileExt = "jpg";
+        const fileName = `${profile.id}-${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file);
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', profile.id);
+        if (uploadError) throw uploadError;
 
-      if (updateError) throw updateError;
+        const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
 
-      showToast("Success", "Profile picture updated!", "success");
-      await refreshProfile();
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ avatar_url: publicUrl })
+            .eq('id', profile.id);
+
+        if (updateError) throw updateError;
+
+        showToast("Success", "Profile picture updated!", "success");
+        await refreshProfile();
 
     } catch (error: any) {
-      showToast("Error", error.message || "Error uploading avatar", "error");
+        showToast("Error", error.message || "Error uploading avatar", "error");
     } finally {
-      setUploading(false);
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -97,6 +110,11 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!profile) return;
     
+    if (profile.name === name.trim()) {
+        showToast("Info", "No changes detected.", "info");
+        return;
+    }
+    
     setUpdating(true);
     const { error } = await supabase
       .from('profiles')
@@ -125,6 +143,17 @@ export default function ProfilePage() {
     <div className="min-h-screen py-6 px-4 sm:px-6 lg:px-12" style={{ backgroundColor: "var(--color-main-bg)" }}>
       <AppBreadcrumb />
       
+      {selectedImageSrc && (
+        <ImageCropper 
+            imageSrc={selectedImageSrc}
+            onCropComplete={handleUploadCroppedImage}
+            onCancel={() => {
+                setSelectedImageSrc(null);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }}
+        />
+      )}
+
       <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold" style={{ color: "var(--color-text-primary)" }}>My Profile</h1>
 
@@ -154,7 +183,7 @@ export default function ProfilePage() {
               <input
                 type="file"
                 ref={fileInputRef}
-                onChange={handleAvatarUpload}
+                onChange={onFileSelect}
                 accept="image/*"
                 className="hidden"
               />
