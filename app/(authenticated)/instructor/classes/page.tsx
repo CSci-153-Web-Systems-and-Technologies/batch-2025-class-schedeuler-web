@@ -22,7 +22,6 @@ import { useToast } from "@/app/context/ToastContext";
 import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
 import { useSubjects } from "@/app/(authenticated)/student/subjects/SubjectContext";
 
-// Lazy load heavy modals and components
 const CreateClassModal = dynamic(() => import("../dashboard/components/CreateClassModal"), { ssr: false });
 const EditClassModal = dynamic(() => import("./components/EditClassModal"), { ssr: false });
 const ViewStudentsModal = dynamic(() => import("./components/ViewStudentsModal"), { ssr: false });
@@ -286,7 +285,7 @@ export default function InstructorClassesPage() {
   const isDark = theme === 'dark';
 
   const ClassActions = ({ cls }: { cls: ClassItem }) => (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-[var(--color-hover)]" style={{ color: 'var(--color-text-secondary)' }}><MoreHorizontal size={16} /></Button>
         </DropdownMenuTrigger>

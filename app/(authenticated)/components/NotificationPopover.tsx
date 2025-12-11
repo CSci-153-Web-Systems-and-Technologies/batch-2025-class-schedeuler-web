@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/Button";
 import { Bell, Check, Trash2, Info, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import { useNotifications } from "@/app/context/NotificationContext";
 import Link from "next/link";
-// [FIX] Import Theme Context to pass styles to the Portal
 import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
 
 import {
@@ -17,7 +16,6 @@ import {
 export default function NotificationPopover() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   
-  // [FIX] Get current theme to ensure Portal has access to CSS variables
   const { theme } = useThemeContext();
   const themeClass = theme === 'dark' ? 'authenticated dark' : 'authenticated';
 
@@ -31,7 +29,7 @@ export default function NotificationPopover() {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative rounded-full transition-all duration-200 bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]">
           <Bell className="h-5 w-5" />
@@ -41,7 +39,6 @@ export default function NotificationPopover() {
         </Button>
       </DropdownMenuTrigger>
       
-      {/* [FIX] Apply themeClass here so the Portal inherits the dark mode variables */}
       <DropdownMenuContent 
         align="end" 
         className={`w-80 p-0 overflow-hidden bg-[var(--color-components-bg)] border-[var(--color-border)] ${themeClass}`}
