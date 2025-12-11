@@ -7,22 +7,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app
 import { Label } from "@/app/components/ui/Label";
 import { Switch } from "@/app/components/ui/Switch"; 
 import { useThemeContext } from '@/app/(authenticated)/components/ThemeContext';
-import { useUser } from '@/app/context/UserContext'; // [FIX] Import User Context
+import { useUser } from '@/app/context/UserContext'; 
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
 import { Moon, Sun, Bell, Shield } from 'lucide-react';
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useThemeContext();
-  const { profile, refreshProfile } = useUser(); // [FIX] Get profile data
+  const { profile, refreshProfile } = useUser();
   const supabase = createClient();
   const { showToast } = useToast();
 
-  // Local state for immediate UI feedback
   const [taskReminders, setTaskReminders] = useState(true);
   const [classAlerts, setClassAlerts] = useState(true);
 
-  // Sync state with DB profile when it loads
   useEffect(() => {
     if (profile) {
       setTaskReminders(profile.notify_task_reminders ?? true);
@@ -30,15 +28,12 @@ export default function SettingsPage() {
     }
   }, [profile]);
 
-  // Handler to update settings
   const handleToggleSetting = async (key: 'notify_task_reminders' | 'notify_class_alerts', value: boolean) => {
-    // 1. Optimistic Update
     if (key === 'notify_task_reminders') setTaskReminders(value);
     if (key === 'notify_class_alerts') setClassAlerts(value);
 
     if (!profile) return;
 
-    // 2. Update DB
     const { error } = await supabase
         .from('profiles')
         .update({ [key]: value })
@@ -46,11 +41,8 @@ export default function SettingsPage() {
 
     if (error) {
         showToast("Error", "Failed to save setting", "error");
-        // Revert on error (optional)
         await refreshProfile(); 
     } else {
-        // Silent success or tiny toast
-        // showToast("Saved", "Settings updated", "success");
         refreshProfile();
     }
   };
@@ -62,7 +54,6 @@ export default function SettingsPage() {
       <div className="max-w-3xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold" style={{ color: "var(--color-text-primary)" }}>Settings</h1>
 
-        {/* Appearance Settings */}
         <Card className="bg-[var(--color-components-bg)] border-[var(--color-border)]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2" style={{ color: "var(--color-text-primary)" }}>
@@ -89,7 +80,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Notification Settings */}
         <Card className="bg-[var(--color-components-bg)] border-[var(--color-border)]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2" style={{ color: "var(--color-text-primary)" }}>
@@ -100,7 +90,6 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             
-            {/* Task Reminders Toggle */}
             <div className="flex items-center justify-between p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bar-bg)]">
               <div className="space-y-0.5">
                 <Label className="text-base" style={{ color: "var(--color-text-primary)" }}>Task Reminders</Label>
@@ -112,7 +101,6 @@ export default function SettingsPage() {
               />
             </div>
 
-            {/* Class Alerts Toggle */}
             <div className="flex items-center justify-between p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bar-bg)]">
               <div className="space-y-0.5">
                 <Label className="text-base" style={{ color: "var(--color-text-primary)" }}>Class Alerts</Label>
@@ -127,7 +115,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Privacy & Data */}
         <Card className="bg-[var(--color-components-bg)] border-[var(--color-border)]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2" style={{ color: "var(--color-text-primary)" }}>
@@ -148,7 +135,7 @@ export default function SettingsPage() {
                     color: 'var(--color-text-primary)'
                 }}
               >
-                  Current Version: 1.0.0 (Beta)
+                  Current Version: 1.0.2
               </div>
           </CardContent>
         </Card>
