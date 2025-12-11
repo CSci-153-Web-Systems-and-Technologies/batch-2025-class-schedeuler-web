@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw, Loader2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
 import {
@@ -15,10 +15,10 @@ import {
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/DatePickerStyles.css';
-
 import { checkForConflicts } from '@/utils/calendarUtils';
 import { useSubjects } from '@/app/(authenticated)/student/subjects/SubjectContext';
 import { CalendarEvent, EventType, RepeatPattern } from '@/types/calendar';
+import { Modal } from '@/app/components/ui/Modal';
 
 interface PreFilledData {
   startTime?: string;
@@ -215,19 +215,30 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
     }
   };
 
-  if (!isOpen) return null;
+  const footerContent = (
+    <div className="flex justify-end gap-3 w-full">
+      <button
+        type="button"
+        onClick={onClose}
+        className="px-5 py-2.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)] transition-colors font-medium"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        form="create-class-form"
+        disabled={loading}
+        className="px-5 py-2.5 rounded-lg bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity font-medium disabled:opacity-50 flex items-center gap-2"
+      >
+        {loading && <Loader2 size={18} className="animate-spin" />}
+        {loading ? 'Creating...' : 'Create Class'}
+      </button>
+    </div>
+  );
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[var(--color-components-bg)] w-full max-w-lg rounded-2xl shadow-xl border border-[var(--color-border)] flex flex-col max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center sticky top-0 bg-[var(--color-components-bg)] z-10">
-          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Create New Class</h2>
-          <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
-            <X size={24} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+    <Modal isOpen={isOpen} onClose={onClose} title="Create New Class" footer={footerContent}>
+        <form id="create-class-form" onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="bg-[var(--color-hover)] p-4 rounded-xl flex items-center justify-between border border-[var(--color-primary)] border-dashed">
             <div>
               <p className="text-xs text-[var(--color-text-secondary)] uppercase font-bold tracking-wider">Join Code</p>
@@ -326,7 +337,6 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
                             type="time" 
                             value={formData.startTime}
                             onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                            // [FIX] Added dark mode icon filter to make it visible
                             className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none dark:[&::-webkit-calendar-picker-indicator]:filter dark:[&::-webkit-calendar-picker-indicator]:invert"
                         />
                     </div>
@@ -336,7 +346,6 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
                             type="time" 
                             value={formData.endTime}
                             onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                            // [FIX] Added dark mode icon filter to make it visible
                             className="w-full px-3 py-2 rounded-md bg-[var(--color-components-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none dark:[&::-webkit-calendar-picker-indicator]:filter dark:[&::-webkit-calendar-picker-indicator]:invert"
                         />
                     </div>
@@ -382,26 +391,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated, init
               </div>
             </div>
           </div>
-
-          <div className="pt-4 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)] transition-colors font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2.5 rounded-lg bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity font-medium disabled:opacity-50 flex items-center gap-2"
-            >
-              {loading && <Loader2 size={18} className="animate-spin" />}
-              {loading ? 'Creating...' : 'Create Class'}
-            </button>
-          </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

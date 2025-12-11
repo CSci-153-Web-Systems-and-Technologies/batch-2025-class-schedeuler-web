@@ -1,4 +1,5 @@
-// app/(authenticated)/components/ClassCard.tsx
+"use client";
+
 import React from "react";
 import { cn } from "@/lib/utils";
 
@@ -9,8 +10,10 @@ export interface ClassCardProps {
   bgColor?: string;
   borderColor?: string;
   className?: string;
+  onClick?: () => void; // [NEW] Added for interaction
 }
 
+// Your original helper function
 const darkenHex = (hex: string, percent: number): string => {
   let color = hex.replace(/^#/, '');
   if (color.length === 3) {
@@ -35,14 +38,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
   time,
   bgColor = "#60A5FA",
   borderColor,
-  className, 
+  className,
+  onClick, // [NEW] Destructure onClick
 }) => {
   const finalBorderColor = borderColor || darkenHex(bgColor, 30);
 
   return (
     <div
+      onClick={onClick} // [NEW] Attach click handler
       className={cn(
-        "flex flex-col p-4 border-l-4 rounded-md shadow-sm transition-all", 
+        "flex flex-col p-4 border-l-4 rounded-md shadow-sm transition-all",
+        // [NEW] Only add hover effects if clickable
+        onClick && "cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-[0.99]", 
         className
       )}
       style={{ 

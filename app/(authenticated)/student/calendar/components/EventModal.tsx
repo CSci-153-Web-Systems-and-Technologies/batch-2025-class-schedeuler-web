@@ -1,4 +1,5 @@
-// app/(authenticated)/student/calendar/components/EventModal.tsx
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { CalendarEvent, EventType, RepeatPattern } from '@/types/calendar';
 import { SlotInfo } from 'react-big-calendar';
@@ -7,6 +8,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/DatePickerStyles.css'; 
 import { useToast } from '@/app/context/ToastContext'; 
 import { Lock } from 'lucide-react';
+import { Modal } from '@/app/components/ui/Modal';
 
 interface EventModalProps {
   event?: CalendarEvent | null;
@@ -82,8 +84,8 @@ const EventModal: React.FC<EventModalProps> = ({
     }
   }, [event, slotInfo, isScheduleOnly, disableSubjectCreation]); 
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if(e) e.preventDefault();
     if (isOfficialClass) return; 
     
     if (disableSubjectCreation && formData.type === EventType.SUBJECT) {
@@ -181,26 +183,59 @@ const EventModal: React.FC<EventModalProps> = ({
       }
     });
   };
+  
+  const titleText = isOfficialClass 
+    ? 'Class Details' 
+    : (event ? 'Edit Event' : (isScheduleOnly ? 'Create New Subject' : 'Create New Event'));
+
+  const headerContent = isOfficialClass ? (
+    <div className="flex items-center gap-1 text-amber-600 bg-amber-100 px-2 py-1 rounded text-xs font-medium">
+        <Lock size={12} />
+        <span>Read Only</span>
+    </div>
+  ) : null;
+
+  const footerContent = (
+    <div className="flex justify-end gap-2 w-full">
+      {!isOfficialClass && event && (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="px-4 py-2 text-red-600 hover:text-red-800 transition-colors text-sm font-medium"
+        >
+          Delete
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onClose}
+        className="px-4 py-2 border border-[var(--color-border)] rounded hover:bg-[var(--color-hover)] transition-colors text-[var(--color-text-primary)] text-sm"
+      >
+        {isOfficialClass ? 'Close' : 'Cancel'}
+      </button>
+      
+      {!isOfficialClass && (
+        <button
+            type="button"
+            onClick={() => handleSubmit()}
+            className="px-4 py-2 bg-[var(--color-primary)] text-white rounded hover:opacity-90 transition-colors text-sm font-medium"
+        >
+            Save
+        </button>
+      )}
+    </div>
+  );
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[var(--color-components-bg)] rounded-lg p-6 w-full max-w-md border border-[var(--color-border)] shadow-xl flex flex-col max-h-[90vh]">
-        <div className="flex justify-between items-center mb-4 flex-shrink-0">
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
-            {isOfficialClass 
-                ? 'Class Details' 
-                : (event ? 'Edit Event' : (isScheduleOnly ? 'Create New Subject' : 'Create New Event'))
-            }
-            </h2>
-            {isOfficialClass && (
-                <div className="flex items-center gap-1 text-amber-600 bg-amber-100 px-2 py-1 rounded text-xs font-medium">
-                    <Lock size={12} />
-                    <span>Read Only</span>
-                </div>
-            )}
-        </div>
-
-        <div className="overflow-y-auto flex-grow px-2"> 
+    <Modal 
+        isOpen={true} 
+        onClose={onClose} 
+        title={titleText} 
+        headerContent={headerContent} 
+        className="max-w-md"
+        footer={footerContent}
+    >
+        <div className="p-6"> 
           <form onSubmit={handleSubmit}>
             {!isScheduleOnly && !isOfficialClass && (
               <div className="mb-4">
@@ -209,7 +244,7 @@ const EventModal: React.FC<EventModalProps> = ({
                   {!disableSubjectCreation && (
                     <button
                       type="button"
-                      className={`px-4 py-2 rounded transition-colors ${
+                      className={`px-4 py-2 rounded transition-colors text-sm ${
                         formData.type === EventType.SUBJECT 
                           ? 'bg-[var(--color-primary)] text-white' 
                           : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
@@ -221,18 +256,18 @@ const EventModal: React.FC<EventModalProps> = ({
                   )}
                   <button
                     type="button"
-                    className={`px-4 py-2 rounded transition-colors ${
+                    className={`px-4 py-2 rounded transition-colors text-sm ${
                       formData.type === EventType.TASK 
                         ? 'bg-[var(--color-primary)] text-white' 
                         : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
                     }`}
                     onClick={() => setFormData({...formData, type: EventType.TASK, repeatPattern: RepeatPattern.NONE, color: COLOR_OPTIONS[2]})}
                   >
-                    Task/Homework
+                    Task
                   </button>
                   <button
                     type="button"
-                    className={`px-4 py-2 rounded transition-colors ${
+                    className={`px-4 py-2 rounded transition-colors text-sm ${
                       formData.type === EventType.EXAM 
                         ? 'bg-[var(--color-primary)] text-white' 
                         : 'bg-[var(--color-hover)] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]'
@@ -284,7 +319,7 @@ const EventModal: React.FC<EventModalProps> = ({
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
                 Start Time {isOfficialClass ? '' : <span className="text-red-500">*</span>}
               </label>
-              <div className="flex gap-2 w-full">
+              <div className="flex gap-2 w-full"> 
                 <DatePicker
                   selected={formData.start}
                   onChange={(date) => date && setFormData({...formData, start: date})}
@@ -302,7 +337,7 @@ const EventModal: React.FC<EventModalProps> = ({
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
                 End Time {isOfficialClass ? '' : <span className="text-red-500">*</span>}
               </label>
-              <div className="flex gap-2 w-full">
+              <div className="flex gap-2 w-full"> 
                   <DatePicker
                       selected={formData.end}
                       onChange={(date) => date && setFormData({...formData, end: date})}
@@ -456,37 +491,7 @@ const EventModal: React.FC<EventModalProps> = ({
             )}
           </form>
         </div>
-
-        <div className="flex justify-end gap-2 mt-6 flex-shrink-0">
-          {!isOfficialClass && event && (
-            <button
-              type="button"
-              onClick={onDelete}
-              className="px-4 py-2 text-red-600 hover:text-red-800 transition-colors"
-            >
-              Delete
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 border border-[var(--color-border)] rounded hover:bg-[var(--color-hover)] transition-colors text-[var(--color-text-primary)]"
-          >
-            {isOfficialClass ? 'Close' : 'Cancel'}
-          </button>
-          
-          {!isOfficialClass && (
-            <button
-                type="button"
-                onClick={handleSubmit}
-                className="px-4 py-2 bg-[var(--color-primary)] text-white rounded hover:opacity-90 transition-colors"
-            >
-                Save
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
 
