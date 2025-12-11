@@ -164,8 +164,20 @@ The project is optimized for deployment on **Vercel**.
 
 | Release Version | Date Released | Type |
 |-----------------|---------------|------|
+| v1.0.2          | 2025-12-12    | Optimization & Mobile Support |
 | v1.0.1          | 2025-12-11    | Feature Update & UI Fixes |
 | v1.0.0          | 2025-12-10    | Initial Deployment (Bug Testing) |
+
+### v1.0.2 Release Notes
+**What's New**
+- **⚡ Dashboard Optimization:** - Migrated initial data fetching to Server Components for instant page loads.
+  - Added "Skeleton" loading states to eliminate layout shifts.
+  - Replaced `moment.js` with `date-fns` to significantly reduce bundle size.
+- **📱 Responsive Improvements:**
+  - **Instructor Classes:** Now switches to a mobile-friendly Card layout on smaller screens.
+  - **Dropdowns:** Fixed layout shifting issues when opening action menus or notifications.
+- **🔔 Notifications:** Students now receive system notifications when an Instructor proposes or finalizes a schedule change.
+- **🎨 UI Enhancements:** Class cards on the dashboard are now clickable, opening detailed event modals directly.
 
 ### v1.0.1 Release Notes
 **What's New**
