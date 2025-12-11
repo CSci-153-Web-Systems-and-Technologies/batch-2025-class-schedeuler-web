@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Clock, Loader2, RefreshCw, Vote, CalendarDays, Merge } from 'lucide-react';
+import { Loader2, RefreshCw, Vote, CalendarDays, Merge, Clock } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
 import { Button } from "@/components/ui/Button";
@@ -16,9 +16,9 @@ import {
 } from "@/app/components/ui/Select";
 import { useSubjects } from '@/app/(authenticated)/student/subjects/SubjectContext';
 import { CalendarEvent, EventType, RepeatPattern } from '@/types/calendar';
-import { generateRecurringEvents } from '@/utils/calendarUtils';
-import moment from 'moment';
-import { addMinutes, format, set } from 'date-fns';
+import { findPatternSlots, Suggestion } from '@/utils/schedulingUtils';
+import { Modal } from '@/app/components/ui/Modal';
+import { differenceInMinutes, parse, format, isValid } from 'date-fns';
 
 interface SuggestTimeModalProps {
   isOpen: boolean;
@@ -27,37 +27,10 @@ interface SuggestTimeModalProps {
   onScheduleUpdated: () => void;
 }
 
-interface Suggestion {
-    days: number[]; 
-    startTime: string;
-    endTime: string;
-    busyCount: number;
-    busyStudentNames: string[];
-    isMerged?: boolean; 
-    totalDuration?: number;
-}
-
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const formatDays = (days: number[]) => {
     return days.sort().map(d => DAYS_OF_WEEK[d]).join(', ');
-};
-
-const getCombinations = (pool: number[], k: number): number[][] => {
-    const result: number[][] = [];
-    const f = (start: number, current: number[]) => {
-        if (current.length === k) {
-            result.push([...current]);
-            return;
-        }
-        for (let i = start; i < pool.length; i++) {
-            current.push(pool[i]);
-            f(i + 1, current);
-            current.pop();
-        }
-    };
-    f(0, []);
-    return result;
 };
 
 const fetchStudentBusyTimes = async (classId: string, supabase: any): Promise<{ [studentId: string]: CalendarEvent[] }> => {
@@ -102,97 +75,6 @@ const fetchStudentBusyTimes = async (classId: string, supabase: any): Promise<{ 
     return groupedEvents;
 };
 
-const findPatternSlots = (
-    allBusyEvents: { event: CalendarEvent, isInstructor: boolean, studentId?: string }[], 
-    durationMinutes: number,
-    poolDays: number[], 
-    sessionsPerWeek: number,
-    timePreference: 'any' | 'morning' | 'afternoon'
-): Suggestion[] => {
-    const suggestions: Suggestion[] = [];
-    const intervalMinutes = 30;
-    
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const searchWindowEnd = moment(now).add(7, 'days').toDate();
-
-    const busyInstances: { start: Date, end: Date }[] = [];
-    allBusyEvents.forEach(busyEvent => {
-        const instances = generateRecurringEvents(
-            [busyEvent.event], 
-            now, 
-            'week' 
-        ).filter(instance => instance.start >= now && instance.start <= searchWindowEnd);
-        
-        instances.forEach(ins => {
-            busyInstances.push({ start: ins.start, end: ins.end });
-        });
-    });
-
-    const dayCombinations = getCombinations(poolDays, sessionsPerWeek);
-
-    let startHour = 7; 
-    let endHour = 20;
-
-    if (timePreference === 'morning') {
-        endHour = 12;
-    } else if (timePreference === 'afternoon') {
-        startHour = 13; 
-        endHour = 20; 
-    }
-
-    let baseTime = set(now, { hours: startHour, minutes: 0, seconds: 0, milliseconds: 0 }); 
-    const endTimeLimit = set(now, { hours: endHour, minutes: 0 }); 
-
-    while (addMinutes(baseTime, durationMinutes) <= endTimeLimit) {
-        const timeSlotStartStr = format(baseTime, 'HH:mm'); 
-        const slotDurationEnd = addMinutes(baseTime, durationMinutes);
-        
-        for (const combination of dayCombinations) {
-            let comboConflict = false;
-
-            for (const dayIndex of combination) {
-                let checkDate = new Date(now);
-                const todayIndex = checkDate.getDay();
-                const daysUntil = (dayIndex + 7 - todayIndex) % 7;
-                checkDate.setDate(checkDate.getDate() + daysUntil);
-                
-                const [h, m] = timeSlotStartStr.split(':').map(Number);
-                const specificStart = set(checkDate, { hours: h, minutes: m });
-                const specificEnd = addMinutes(specificStart, durationMinutes);
-
-                const isBlocked = busyInstances.some(busy => 
-                    moment(specificStart).isBefore(busy.end) && moment(specificEnd).isAfter(busy.start)
-                );
-
-                if (isBlocked) {
-                    comboConflict = true;
-                    break; 
-                }
-            }
-
-            if (!comboConflict) {
-                suggestions.push({
-                    days: combination,
-                    startTime: format(baseTime, 'h:mm a'),
-                    endTime: format(slotDurationEnd, 'h:mm a'),
-                    busyCount: 0,
-                    busyStudentNames: [],
-                    totalDuration: durationMinutes
-                });
-            }
-            
-            if (suggestions.length >= 5) break; 
-        }
-        
-        baseTime = addMinutes(baseTime, intervalMinutes);
-        if (suggestions.length >= 5) break;
-    }
-
-    return suggestions;
-};
-
-
 export default function SuggestTimeModal({ isOpen, onClose, classData, onScheduleUpdated }: SuggestTimeModalProps) {
   const [loading, setLoading] = useState(false);
   const [duration, setDuration] = useState(90);
@@ -209,11 +91,21 @@ export default function SuggestTimeModal({ isOpen, onClose, classData, onSchedul
 
   useEffect(() => {
       if (isOpen && classData.id) {
-          const start = moment(classData.startTime, 'HH:mm');
-          const end = moment(classData.endTime, 'HH:mm');
-          if (start.isValid() && end.isValid()) {
-             setDuration(end.diff(start, 'minutes'));
+          const now = new Date();
+          if (classData.startTime && classData.endTime) {
+             let start = parse(classData.startTime, 'HH:mm:ss', now);
+             let end = parse(classData.endTime, 'HH:mm:ss', now);
+             
+             if (!isValid(start) || !isValid(end)) {
+                start = parse(classData.startTime, 'HH:mm', now);
+                end = parse(classData.endTime, 'HH:mm', now);
+             }
+
+             if (isValid(start) && isValid(end)) {
+                setDuration(differenceInMinutes(end, start));
+             }
           }
+          
           if (classData.repeatDays && classData.repeatDays.length > 0) {
               setSessionsPerWeek(classData.repeatDays.length);
           }
@@ -293,49 +185,70 @@ export default function SuggestTimeModal({ isOpen, onClose, classData, onSchedul
   const handleCreateProposal = async (suggestion: Suggestion) => {
     setLoading(true);
     
-    const dayLabel = formatDays(suggestion.days);
-    const displayString = `${dayLabel} ${suggestion.startTime} - ${suggestion.endTime}`;
+    try {
+        const dayLabel = formatDays(suggestion.days);
+        const displayString = `${dayLabel} ${suggestion.startTime} - ${suggestion.endTime}`;
 
-    const newStartTime = moment(suggestion.startTime, 'h:mm a').format('HH:mm:ss');
-    const newEndTime = moment(suggestion.endTime, 'h:mm a').format('HH:mm:ss');
+        const now = new Date();
+        const startObj = parse(suggestion.startTime, 'h:mm a', now);
+        const endObj = parse(suggestion.endTime, 'h:mm a', now);
+        
+        const newStartTime = format(startObj, 'HH:mm:ss');
+        const newEndTime = format(endObj, 'HH:mm:ss');
 
-    const { error } = await supabase
-      .from('proposals')
-      .insert({
-        class_id: classData.id,
-        new_start_time: newStartTime,
-        new_end_time: newEndTime,
-        new_repeat_days: suggestion.days, 
-        display_string: displayString,
-        threshold_percent: threshold,
-        status: 'pending'
-      });
+        const { error: proposalError } = await supabase
+          .from('proposals')
+          .insert({
+            class_id: classData.id,
+            new_start_time: newStartTime,
+            new_end_time: newEndTime,
+            new_repeat_days: suggestion.days, 
+            display_string: displayString,
+            threshold_percent: threshold,
+            status: 'pending'
+          });
 
-    setLoading(false);
+        if (proposalError) throw proposalError;
 
-    if (error) {
+        const { data: students } = await supabase
+            .from('enrollments')
+            .select('student_id')
+            .eq('class_id', classData.id)
+            .eq('status', 'approved');
+
+        if (students && students.length > 0) {
+            const notifications = students.map(s => ({
+                user_id: s.student_id,
+                title: 'New Vote Required',
+                message: `Vote on a schedule change for ${classData.name}: ${displayString}`,
+                type: 'proposal',
+                link: '/student/dashboard',
+                is_read: false
+            }));
+
+            await supabase.from('notifications').insert(notifications);
+        }
+
+        showToast('Proposal Created', `Voting started for ${displayString}. Students have been notified.`, 'success');
+        onClose();
+        if (onScheduleUpdated) onScheduleUpdated();
+
+    } catch (error: any) {
       console.error(error);
-      showToast('Error', 'Failed to create proposal.', 'error');
-    } else {
-      showToast('Proposal Created', `Voting started for ${displayString}`, 'success');
-      onClose();
+      showToast('Error', error.message || 'Failed to create proposal.', 'error');
+    } finally {
+        setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
+  const headerContent = (
+      <div className="flex items-center gap-2">
+         <Clock size={20} /> Smart Suggest
+      </div>
+  );
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[var(--color-components-bg)] w-full max-w-lg rounded-2xl shadow-xl border border-[var(--color-border)] flex flex-col max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center sticky top-0 bg-[var(--color-components-bg)] z-10">
-          <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-            <Clock size={20} /> Smart Suggest
-          </h2>
-          <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
-            <X size={24} />
-          </button>
-        </div>
-
+    <Modal isOpen={isOpen} onClose={onClose} headerContent={headerContent}>
         <div className="p-6 space-y-6">
             <div className={`p-3 rounded-lg text-sm border ${isMergedView ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800' : 'bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-900'}`}>
                 <p className={`font-medium ${isMergedView ? 'text-amber-800 dark:text-amber-300' : 'text-blue-800 dark:text-blue-300'}`}>
@@ -490,7 +403,6 @@ export default function SuggestTimeModal({ isOpen, onClose, classData, onSchedul
                 )}
             </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -1,10 +1,14 @@
-// app/(authenticated)/student/dashboard/components/JoinClassButton.tsx
 "use client";
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { SquarePlus } from 'lucide-react';
-import JoinClassModal from './JoinClassModal';
+import dynamic from 'next/dynamic';
+
+const JoinClassModal = dynamic(() => import('./JoinClassModal'), {
+  ssr: false,
+  loading: () => null, 
+});
 
 interface JoinClassButtonProps {
   className?: string;
@@ -23,10 +27,12 @@ const JoinClassButton: React.FC<JoinClassButtonProps> = ({ className = '' }) => 
         <SquarePlus className="ml-2 h-5 w-5" strokeWidth={3} />
       </Button>
 
-      <JoinClassModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
+      {isModalOpen && (
+        <JoinClassModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+        />
+      )}
     </>
   );
 };

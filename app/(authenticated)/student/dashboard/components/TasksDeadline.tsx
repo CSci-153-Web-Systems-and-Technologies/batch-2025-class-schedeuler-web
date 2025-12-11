@@ -5,7 +5,6 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { useTasks } from "../../tasks/TaskContext"; 
 import { CalendarEvent, EventType } from '@/types/calendar';
 
-// --- Helpers ---
 function getDueTime(task: CalendarEvent): string {
     return task.start 
         ? task.start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })

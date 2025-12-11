@@ -41,9 +41,9 @@ const getScheduleData = (subjects: CalendarEvent[]) => {
 const ExportPanel: React.FC = () => {
     const { subjects } = useSubjects();
 
-    // --- HANDLERS ---
 
-    const handlePrint = () => {
+
+    const handlePrint= () => {
         window.print();
     };
 
@@ -54,10 +54,9 @@ const ExportPanel: React.FC = () => {
             return;
         }
 
-        // CSV Header
+
         const headers = ["Subject Code", "Title", "Instructor", "Location", "Days", "Time"];
         
-        // CSV Rows
         const rows = data.map(row => 
             [row.code, row.title, row.instructor, row.location, `"${row.days}"`, row.time].join(",")
         );
@@ -84,15 +83,12 @@ const ExportPanel: React.FC = () => {
 
         const doc = new jsPDF();
 
-        // Title
         doc.setFontSize(18);
         doc.text("Class Schedule", 14, 20);
         
-        // Date
         doc.setFontSize(10);
         doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
 
-        // Table
         autoTable(doc, {
             startY: 35,
             head: [['Code', 'Subject', 'Instructor', 'Location', 'Days', 'Time']],
@@ -104,7 +100,7 @@ const ExportPanel: React.FC = () => {
                 row.days,
                 row.time
             ]),
-            headStyles: { fillColor: [65, 105, 225] }, // Matches your Primary Blue
+            headStyles: { fillColor: [65, 105, 225] }, 
         });
 
         doc.save("my_schedule.pdf");

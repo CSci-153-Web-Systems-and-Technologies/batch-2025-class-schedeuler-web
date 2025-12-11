@@ -62,14 +62,28 @@ const StatCard: React.FC<StatCardProps> = ({
   );
 };
 
-export default function DashboardStats() {
+interface DashboardStatsProps {
+  initialData?: {
+    totalStudents: number;
+    conflictCount: number;
+  };
+}
+
+export default function DashboardStats({ initialData }: DashboardStatsProps) {
   const { subjects } = useSubjects();
   const { tasks } = useTasks();
   const supabase = createClient();
-  const [totalStudents, setTotalStudents] = useState(0);
-  const [conflictCount, setConflictCount] = useState(0);
+  
+  const [totalStudents, setTotalStudents] = useState(initialData?.totalStudents || 0);
+  const [conflictCount, setConflictCount] = useState(initialData?.conflictCount || 0);
 
-  // Calculated from Context (which is already realtime for subjects)
+  useEffect(() => {
+    if (initialData) {
+        setTotalStudents(initialData.totalStudents);
+        setConflictCount(initialData.conflictCount);
+    }
+  }, [initialData]);
+
   const classesThisWeek = React.useMemo(() => {
     const now = new Date();
     const events = generateRecurringEvents(subjects, now, 'week'); 
@@ -82,7 +96,6 @@ export default function DashboardStats() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Fetch classes owned by instructor
     const { data: classes } = await supabase.from('classes').select('id').eq('instructor_id', user.id);
     
     if (classes && classes.length > 0) {
@@ -112,12 +125,7 @@ export default function DashboardStats() {
     }
   }, [supabase]);
 
-  // Initial Fetch
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats, subjects]); // Re-fetch if subjects list changes (e.g. deletion)
-
-  // [NEW] Robust Realtime Listener for Stats
+  // Realtime Listeners
   useEffect(() => {
     let channel: any;
 
@@ -127,21 +135,17 @@ export default function DashboardStats() {
 
       channel = supabase
         .channel('dashboard_stats_updates')
-        // 1. Listen for Enrollment changes (New student / Student left)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'enrollments' }, // We rely on logic in fetchStats to filter by my classes
+          { event: '*', schema: 'public', table: 'enrollments' }, 
           () => {
-             console.log("Stats: Enrollment changed, refetching...");
              fetchStats();
           }
         )
-        // 2. Listen for Class Deletions/Additions directly
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'classes', filter: `instructor_id=eq.${user.id}` },
           () => {
-             console.log("Stats: Class changed, refetching...");
              fetchStats();
           }
         )

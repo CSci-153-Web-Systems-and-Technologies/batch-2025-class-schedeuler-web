@@ -1,14 +1,17 @@
-// app/(authenticated)/instructor/dashboard/components/InstructorClasses.tsx
 "use client";
 
 import React, { useMemo } from "react";
-import ClassCard, { ClassCardProps } from "@/app/(authenticated)/components/ClassCard";
+import ClassCard from "@/app/(authenticated)/components/ClassCard";
 import { useSubjects } from "@/app/(authenticated)/student/subjects/SubjectContext";
 import { generateRecurringEvents } from "@/utils/calendarUtils";
 import { EventType, CalendarEvent } from "@/types/calendar";
-import moment from "moment";
+import { format } from "date-fns";
 
-export default function InstructorClasses() {
+interface InstructorClassesProps {
+  onClassClick: (event: CalendarEvent) => void;
+}
+
+export default function InstructorClasses({ onClassClick }: InstructorClassesProps) {
   const { subjects: allSubjects, loading } = useSubjects();
   const currentDate = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
@@ -18,13 +21,7 @@ export default function InstructorClasses() {
     
     return eventsToday
       .filter(e => e.type === EventType.SUBJECT)
-      .sort((a, b) => a.start.getTime() - b.start.getTime())
-      .map((subj: CalendarEvent): ClassCardProps => ({
-        subject: subj.subjectCode ? `${subj.subjectCode} - ${subj.title}` : subj.title,
-        type: subj.location || 'Room TBD', // Use location for instructors
-        time: `${moment(subj.start).format('h:mm A')} - ${moment(subj.end).format('h:mm A')}`,
-        bgColor: subj.color,
-      }));
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
   }, [allSubjects]);
 
   return (
@@ -41,11 +38,14 @@ export default function InstructorClasses() {
         {loading ? (
            <p className="text-sm text-[var(--color-text-secondary)]">Loading schedule...</p>
         ) : todayClasses.length > 0 ? (
-          todayClasses.map((cls, index) => (
+          todayClasses.map((event, index) => (
             <ClassCard
               key={index}
-              {...cls}
-              className="border-l-[6px] shadow-sm hover:translate-x-1 transition-transform"
+              subject={event.subjectCode ? `${event.subjectCode} - ${event.title}` : event.title}
+              type={event.location || 'Room TBD'}
+              time={`${format(event.start, 'h:mm a')} - ${format(event.end, 'h:mm a')}`}
+              bgColor={event.color}
+              onClick={() => onClassClick(event)}
             />
           ))
         ) : (
