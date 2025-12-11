@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-
+import { usePathname } from "next/navigation";
 import {
   Home,
   BookOpen,
@@ -19,7 +19,6 @@ import {
 export interface MenuItem {
   icon: string;
   label: string;
-  active: boolean;
   href: string;
 }
 
@@ -45,6 +44,7 @@ export default function Sidebar({
   logo,
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const pathname = usePathname();
 
   return (
     <>
@@ -94,6 +94,9 @@ export default function Sidebar({
           <ul className="space-y-2">
             {menuItems.map((item, index) => {
               const Icon = iconMap[item.icon];
+              const isActive = item.href === "/student/dashboard" || item.href === "/instructor/dashboard"
+                 ? pathname === item.href
+                 : pathname.startsWith(item.href);
 
               return (
                 <li key={index}>
@@ -103,24 +106,24 @@ export default function Sidebar({
                       ${isCollapsed ? "justify-center" : ""}
                     `}
                     style={{
-                      backgroundColor: item.active 
+                      backgroundColor: isActive 
                         ? 'var(--color-primary)' 
                         : 'transparent',
-                      color: item.active 
+                      color: isActive 
                         ? '#ffffff' 
                         : 'var(--color-text-primary)',
-                      boxShadow: item.active 
+                      boxShadow: isActive 
                         ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' 
                         : 'none',
                     }}
                     onMouseEnter={(e) => {
-                      if (!item.active) {
+                      if (!isActive) {
                         e.currentTarget.style.backgroundColor = 'var(--color-hover)';
                         e.currentTarget.style.color = 'var(--color-text-primary)';
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!item.active) {
+                      if (!isActive) {
                         e.currentTarget.style.backgroundColor = 'transparent';
                         e.currentTarget.style.color = 'var(--color-text-primary)';
                       }
