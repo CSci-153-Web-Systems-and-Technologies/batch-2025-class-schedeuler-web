@@ -67,7 +67,6 @@ const EventModal: React.FC<EventModalProps> = ({
       setFormData(prev => ({
         ...prev,
         start: slotInfo.start,
-        // [FIX] Use slotInfo.end directly to capture the actual drag duration
         end: slotInfo.end, 
         ...defaultEvent
       }));
@@ -285,7 +284,7 @@ const EventModal: React.FC<EventModalProps> = ({
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
                 Start Time {isOfficialClass ? '' : <span className="text-red-500">*</span>}
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full">
                 <DatePicker
                   selected={formData.start}
                   onChange={(date) => date && setFormData({...formData, start: date})}
@@ -293,6 +292,7 @@ const EventModal: React.FC<EventModalProps> = ({
                   timeIntervals={15}
                   dateFormat="MMMM d, yyyy h:mm aa"
                   disabled={isOfficialClass}
+                  wrapperClassName="w-full"
                   className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:opacity-70 disabled:cursor-not-allowed"
                 />
               </div>
@@ -302,7 +302,7 @@ const EventModal: React.FC<EventModalProps> = ({
               <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">
                 End Time {isOfficialClass ? '' : <span className="text-red-500">*</span>}
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full">
                   <DatePicker
                       selected={formData.end}
                       onChange={(date) => date && setFormData({...formData, end: date})}
@@ -310,6 +310,7 @@ const EventModal: React.FC<EventModalProps> = ({
                       timeIntervals={15}
                       dateFormat="MMMM d, yyyy h:mm aa"
                       disabled={isOfficialClass}
+                      wrapperClassName="w-full"
                       className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:opacity-70 disabled:cursor-not-allowed"
                     />
               </div>
@@ -418,6 +419,7 @@ const EventModal: React.FC<EventModalProps> = ({
                             dateFormat="MMMM d, yyyy"
                             isClearable
                             placeholderText="Select date"
+                            wrapperClassName="w-full"
                             className="w-full px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-components-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                         />
                     </div>
