@@ -1,12 +1,11 @@
-// app/(authenticated)/instructor/classes/page.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
-// ... (keep existing imports)
+import dynamic from "next/dynamic";
 import { 
   Search, Filter, MoreHorizontal, BookOpen, Users, AlertCircle, 
-  Calendar, MapPin, Edit, Clock, Trash2, Plus, Copy
+  Calendar, MapPin, Edit, Clock, Trash2, Plus, Copy, ChevronRight
 } from "lucide-react";
 import AppBreadcrumb from "@/app/components/ui/AppBreadCrumb";
 import { Button } from "@/app/components/ui/Button";
@@ -19,14 +18,16 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem,
 } from "@/app/components/ui/Dropdown-menu";
-import CreateClassModal from "../dashboard/components/CreateClassModal";
-import EditClassModal from "./components/EditClassModal";
-import ViewStudentsModal from "./components/ViewStudentsModal";
-import SuggestTimeModal from "./components/SuggestTimeModal";
-import ProposalManager from "./components/ProposalManager"; 
 import { useToast } from "@/app/context/ToastContext";
 import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
 import { useSubjects } from "@/app/(authenticated)/student/subjects/SubjectContext";
+
+// Lazy load heavy modals and components
+const CreateClassModal = dynamic(() => import("../dashboard/components/CreateClassModal"), { ssr: false });
+const EditClassModal = dynamic(() => import("./components/EditClassModal"), { ssr: false });
+const ViewStudentsModal = dynamic(() => import("./components/ViewStudentsModal"), { ssr: false });
+const SuggestTimeModal = dynamic(() => import("./components/SuggestTimeModal"), { ssr: false });
+const ProposalManager = dynamic(() => import("./components/ProposalManager"), { ssr: false });
 
 interface ClassItem {
   id: string;
@@ -37,7 +38,7 @@ interface ClassItem {
   startTime?: string;
   endTime?: string;
   repeatDays?: number[];
-  repeatUntil?: string; // [NEW] Added for EditModal
+  repeatUntil?: string; 
   location: string;
   enrolled: number;
   capacity: number;
@@ -284,6 +285,70 @@ export default function InstructorClassesPage() {
   
   const isDark = theme === 'dark';
 
+  const ClassActions = ({ cls }: { cls: ClassItem }) => (
+    <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-[var(--color-hover)]" style={{ color: 'var(--color-text-secondary)' }}><MoreHorizontal size={16} /></Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent 
+            align="end" 
+            className={`w-48 border-[var(--color-border)] ${theme === 'dark' ? 'authenticated dark' : 'authenticated'}`} 
+            style={{ backgroundColor: 'var(--color-components-bg)' }}
+        >
+            <DropdownMenuLabel style={{ color: 'var(--color-text-primary)' }}>Actions</DropdownMenuLabel>
+            
+            <DropdownMenuItem 
+                className="cursor-pointer focus:bg-[var(--color-hover)] outline-none" 
+                style={{ color: 'var(--color-text-primary)' }}
+                onClick={() => handleCopyCode(cls.code)}
+            >
+                <Copy size={14} className="mr-2"/> Copy Join Code
+            </DropdownMenuItem>
+
+            <DropdownMenuItem 
+                className="cursor-pointer focus:bg-[var(--color-hover)] outline-none" 
+                style={{ color: 'var(--color-text-primary)' }}
+                onClick={() => handleEditClick(cls)}
+            >
+                <Edit size={14} className="mr-2"/> Edit Class
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+                className="cursor-pointer focus:bg-[var(--color-hover)] outline-none" 
+                style={{ color: 'var(--color-text-primary)' }}
+                onClick={() => handleSuggestTimeClick(cls)}
+            >
+                <Clock size={14} className="mr-2"/> Manage Schedule
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+                className="cursor-pointer focus:bg-[var(--color-hover)] outline-none" 
+                style={{ color: 'var(--color-text-primary)' }}
+                onClick={() => handleViewStudentsClick(cls)}
+            >
+                <Users size={14} className="mr-2"/> View Students
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+                className="cursor-pointer focus:bg-[var(--color-hover)] outline-none" 
+                style={{ color: 'var(--color-text-primary)' }}
+                onClick={() => handleArchiveClass(cls)}
+            >
+                <AlertCircle size={14} className="mr-2"/> {cls.status === 'Archived' ? 'Restore' : 'Archive'}
+            </DropdownMenuItem>
+            
+            <DropdownMenuSeparator className="bg-[var(--color-border)]" />
+            
+            <DropdownMenuItem 
+                className="text-red-600 cursor-pointer focus:bg-red-50 dark:focus:bg-red-900/10 outline-none" 
+                onClick={() => handleDeleteClass(cls.id)}
+            >
+                <Trash2 size={14} className="mr-2"/> Delete Class
+            </DropdownMenuItem>
+        </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <div className="min-h-screen py-6 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--color-main-bg)" }}>
       <AppBreadcrumb />
@@ -297,6 +362,7 @@ export default function InstructorClassesPage() {
           <Plus size={18} /> Add New Class
         </Button>
       </div>
+      
       <ProposalManager />
 
       <div 
@@ -331,7 +397,59 @@ export default function InstructorClassesPage() {
         </DropdownMenu>
       </div>
 
-      <div className="rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden mb-8" style={{ backgroundColor: 'var(--color-components-bg)' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden mb-8">
+        {loading ? (
+             <div className="col-span-full text-center py-8 text-[var(--color-text-secondary)]">Loading classes...</div>
+        ) : filteredClasses.length === 0 ? (
+             <div className="col-span-full text-center py-8 text-[var(--color-text-secondary)]">No classes found.</div>
+        ) : (
+            filteredClasses.map(cls => (
+                <div 
+                    key={cls.id} 
+                    className="p-4 rounded-xl border border-[var(--color-border)] shadow-sm bg-[var(--color-components-bg)] flex flex-col gap-3 relative"
+                >
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h3 className="font-bold text-lg text-[var(--color-text-primary)]">{cls.subjectCode || cls.code}</h3>
+                            <p className="text-sm text-[var(--color-text-secondary)]">{cls.name}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                            <ClassActions cls={cls} />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap mt-1">
+                        <Badge style={getBadgeStyle(cls.type, isDark)}>{cls.type}</Badge>
+                        <Badge style={getBadgeStyle(cls.status, isDark)}>{cls.status}</Badge>
+                        {cls.conflictingStudents > 0 && (
+                            <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-transparent">
+                                {cls.conflictingStudents} Conflicts
+                            </Badge>
+                        )}
+                    </div>
+
+                    <div className="space-y-2 mt-2 text-sm text-[var(--color-text-secondary)]">
+                        <div className="flex items-center gap-2">
+                            <Calendar size={14} className="text-[var(--color-primary)]" />
+                            <span>{cls.schedule}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <MapPin size={14} className="text-[var(--color-primary)]" />
+                            <span>{cls.location}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Users size={14} className="text-[var(--color-primary)]" />
+                            <span className={cls.enrolled >= cls.capacity ? "text-amber-600 font-bold" : ""}>
+                                {cls.enrolled} / {cls.capacity} Enrolled
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            ))
+        )}
+      </div>
+
+      <div className="hidden md:block rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden mb-8" style={{ backgroundColor: 'var(--color-components-bg)' }}>
         <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center">
             <h2 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>Classes ({filteredClasses.length})</h2>
         </div>
@@ -339,7 +457,7 @@ export default function InstructorClassesPage() {
         <Table>
             <TableHeader>
                 <TableRow className="hover:bg-transparent border-[var(--color-border)]">
-                    <TableHead className="w-[300px] pl-6" style={{ color: 'var(--color-text-primary)' }}>Course</TableHead>
+                    <TableHead className="w-[250px] pl-6" style={{ color: 'var(--color-text-primary)' }}>Course</TableHead>
                     <TableHead style={{ color: 'var(--color-text-primary)' }}>Schedule</TableHead>
                     <TableHead style={{ color: 'var(--color-text-primary)' }}>Location</TableHead>
                     <TableHead style={{ color: 'var(--color-text-primary)' }}>Enrollment</TableHead>
@@ -365,7 +483,7 @@ export default function InstructorClassesPage() {
                             <TableCell>
                                 <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-primary)' }}>
                                     <Calendar size={14} style={{ color: 'var(--color-text-secondary)' }} />
-                                    {cls.schedule}
+                                    <span className="whitespace-nowrap">{cls.schedule}</span>
                                 </div>
                             </TableCell>
                             <TableCell>
@@ -393,72 +511,12 @@ export default function InstructorClassesPage() {
                                 </Badge>
                                 {cls.conflictingStudents > 0 && (
                                     <p className="text-xs text-red-500 dark:text-red-400 font-medium mt-1" title={`${cls.conflictingStudents} approved student(s) have conflicts.`}>
-                                        ({cls.conflictingStudents} Student{cls.conflictingStudents > 1 ? 's' : ''})
+                                        ({cls.conflictingStudents} Conflict{cls.conflictingStudents > 1 ? 's' : ''})
                                     </p>
                                 )}
                             </TableCell>
                             <TableCell className="text-right pr-6">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-[var(--color-hover)]" style={{ color: 'var(--color-text-secondary)' }}><MoreHorizontal size={16} /></Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent 
-                                        align="end" 
-                                        className={`w-48 border-[var(--color-border)] ${theme === 'dark' ? 'authenticated dark' : 'authenticated'}`} 
-                                        style={{ backgroundColor: 'var(--color-components-bg)' }}
-                                    >
-                                        <DropdownMenuLabel style={{ color: 'var(--color-text-primary)' }}>Actions</DropdownMenuLabel>
-                                        
-                                        <DropdownMenuItem 
-                                            className="cursor-pointer focus:bg-[var(--color-hover)] outline-none" 
-                                            style={{ color: 'var(--color-text-primary)' }}
-                                            onClick={() => handleCopyCode(cls.code)}
-                                        >
-                                            <Copy size={14} className="mr-2"/> Copy Join Code
-                                        </DropdownMenuItem>
-
-                                        <DropdownMenuItem 
-                                            className="cursor-pointer focus:bg-[var(--color-hover)] outline-none" 
-                                            style={{ color: 'var(--color-text-primary)' }}
-                                            onClick={() => handleEditClick(cls)}
-                                        >
-                                            <Edit size={14} className="mr-2"/> Edit Class
-                                        </DropdownMenuItem>
-                                        
-                                        <DropdownMenuItem 
-                                            className="cursor-pointer focus:bg-[var(--color-hover)] outline-none" 
-                                            style={{ color: 'var(--color-text-primary)' }}
-                                            onClick={() => handleSuggestTimeClick(cls)}
-                                        >
-                                            <Clock size={14} className="mr-2"/> Manage Schedule
-                                        </DropdownMenuItem>
-                                        
-                                        <DropdownMenuItem 
-                                            className="cursor-pointer focus:bg-[var(--color-hover)] outline-none" 
-                                            style={{ color: 'var(--color-text-primary)' }}
-                                            onClick={() => handleViewStudentsClick(cls)}
-                                        >
-                                            <Users size={14} className="mr-2"/> View Students
-                                        </DropdownMenuItem>
-                                        
-                                        <DropdownMenuItem 
-                                            className="cursor-pointer focus:bg-[var(--color-hover)] outline-none" 
-                                            style={{ color: 'var(--color-text-primary)' }}
-                                            onClick={() => handleArchiveClass(cls)}
-                                        >
-                                            <AlertCircle size={14} className="mr-2"/> {cls.status === 'Archived' ? 'Restore' : 'Archive'}
-                                        </DropdownMenuItem>
-                                        
-                                        <DropdownMenuSeparator className="bg-[var(--color-border)]" />
-                                        
-                                        <DropdownMenuItem 
-                                            className="text-red-600 cursor-pointer focus:bg-red-50 dark:focus:bg-red-900/10 outline-none" 
-                                            onClick={() => handleDeleteClass(cls.id)}
-                                        >
-                                            <Trash2 size={14} className="mr-2"/> Delete Class
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                <ClassActions cls={cls} />
                             </TableCell>
                         </TableRow>
                     ))
@@ -502,10 +560,10 @@ export default function InstructorClassesPage() {
         </div>
       </div>
 
-      <CreateClassModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onClassCreated={handleDataChange} />
-      <EditClassModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} classData={selectedClass} onClassUpdated={handleDataChange} />
-      <ViewStudentsModal isOpen={isViewStudentsModalOpen} onClose={() => setIsViewStudentsModalOpen(false)} classId={selectedClass?.id || ''} className={selectedClass?.name || ''} onStatusChange={handleDataChange} />
-      <SuggestTimeModal isOpen={isSuggestTimeModalOpen} onClose={() => setIsSuggestTimeModalOpen(false)} classData={selectedClass} onScheduleUpdated={handleDataChange} />
+      {isCreateModalOpen && <CreateClassModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onClassCreated={handleDataChange} />}
+      {isEditModalOpen && <EditClassModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} classData={selectedClass} onClassUpdated={handleDataChange} />}
+      {isViewStudentsModalOpen && <ViewStudentsModal isOpen={isViewStudentsModalOpen} onClose={() => setIsViewStudentsModalOpen(false)} classId={selectedClass?.id || ''} className={selectedClass?.name || ''} onStatusChange={handleDataChange} />}
+      {isSuggestTimeModalOpen && <SuggestTimeModal isOpen={isSuggestTimeModalOpen} onClose={() => setIsSuggestTimeModalOpen(false)} classData={selectedClass} onScheduleUpdated={handleDataChange} />}
     </div>
   );
 }

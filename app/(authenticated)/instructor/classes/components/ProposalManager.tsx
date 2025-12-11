@@ -1,4 +1,3 @@
-// app/(authenticated)/instructor/classes/components/ProposalManager.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -97,8 +96,6 @@ export default function ProposalManager() {
         return () => { supabase.removeChannel(channel); };
     }, [fetchProposals, supabase]);
 
-
-
     const handleFinalize = async (proposal: Proposal, force: boolean = false) => {
         const { error: classError } = await supabase
             .from('classes')
@@ -129,7 +126,7 @@ export default function ProposalManager() {
         if (enrollments && enrollments.length > 0) {
             const notifications = enrollments.map(e => ({
                 user_id: e.student_id,
-                title: 'Schedule Changed',
+                title: 'Schedule Updated',
                 message: `The schedule for ${proposal.classes.name} has been updated to: ${proposal.display_string}.`,
                 type: 'info',
                 link: '/student/classes',
@@ -161,7 +158,7 @@ export default function ProposalManager() {
         }
     };
 
-    if (loading) return <div className="p-4 text-sm text-[var(--color-text-secondary)]">Loading active votes...</div>;
+    if (loading) return null;
     if (proposals.length === 0) return null;
 
     return (
@@ -175,7 +172,6 @@ export default function ProposalManager() {
                 {proposals.map(p => {
                     const percentage = p.votes_total > 0 ? Math.round((p.votes_for / p.votes_total) * 100) : 0;
                     const passed = percentage >= p.threshold_percent;
-                    const remaining = p.votes_total - p.votes_for;
 
                     return (
                         <div 
@@ -188,14 +184,14 @@ export default function ProposalManager() {
                                         <h3 className="font-bold text-[var(--color-text-primary)]">{p.classes.subject_code}</h3>
                                         <p className="text-xs text-[var(--color-text-secondary)]">{p.classes.name}</p>
                                     </div>
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                    <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 whitespace-nowrap">
                                         Voting Live
                                     </span>
                                 </div>
 
                                 <div className="mb-4 p-3 rounded-lg bg-[var(--color-hover)] border border-[var(--color-border)]">
                                     <p className="text-xs text-[var(--color-text-secondary)] uppercase font-bold mb-1">Proposed Change</p>
-                                    <p className="text-sm font-semibold text-[var(--color-primary)]">{p.display_string}</p>
+                                    <p className="text-sm font-semibold text-[var(--color-primary)] break-all">{p.display_string}</p>
                                 </div>
 
                                 <div className="mb-1 flex justify-between text-xs font-medium text-[var(--color-text-primary)]">
