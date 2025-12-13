@@ -137,7 +137,7 @@ export default function InstructorSettingsPage() {
                     color: 'var(--color-text-primary)'
                 }}
               >
-                  Current Version: 1.0.2
+                  Current Version: 1.0.3
               </div>
           </CardContent>
         </Card>
