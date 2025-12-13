@@ -49,13 +49,19 @@ export default function InstructorMobileSidebar({
   }, [isOpen]);
 
   const handleLogout = async () => {
+    // 1. Close Sidebar Immediately
+    onClose();
+    
+    // 2. Immediate Feedback
+    showToast("Logging out...", "Please wait while we sign you out.", "info");
+
+    // 3. Perform Logout
     const result = await logout();
     if (result?.success) {
       router.push((result.redirectUrl || '/landing') + '?toast=logout');
     } else {
       showToast("Error", "Logout failed", "error");
     }
-    onClose();
   };
 
   const getIcon = (type: string) => {
