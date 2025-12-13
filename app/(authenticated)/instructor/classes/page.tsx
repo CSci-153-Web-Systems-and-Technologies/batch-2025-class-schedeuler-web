@@ -128,6 +128,7 @@ export default function InstructorClassesPage() {
                 
                 enrollmentDetails[classId] = enrollmentDetails[classId] || { count: 0, conflicts: 0 };
                 enrollmentDetails[classId].count++;
+                
                 if (hasConflict) {
                     enrollmentDetails[classId].conflicts++;
                     totalConflictCount++; 
@@ -194,6 +195,7 @@ export default function InstructorClassesPage() {
     fetchClasses();
   }, [fetchClasses]);
 
+  // [REALTIME SETUP]
   useEffect(() => {
     let channel: any;
     const setupRealtime = async () => {
@@ -207,10 +209,14 @@ export default function InstructorClassesPage() {
           { event: '*', schema: 'public', table: 'classes', filter: `instructor_id=eq.${user.id}` },
           () => fetchClasses()
         )
+        // Listen to enrollments to update conflict status
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'enrollments' },
-          () => fetchClasses()
+          (payload) => {
+              console.log('Realtime: Enrollment update detected, refreshing list...');
+              fetchClasses();
+          }
         )
         .subscribe();
     };
