@@ -1,4 +1,3 @@
-// app/(authenticated)/instructor/classes/components/EditClassModal.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -49,7 +48,7 @@ export default function EditClassModal({ isOpen, onClose, classData, onClassUpda
     startTime: '09:00',
     endTime: '10:30',
     repeatDays: [] as number[],
-    repeatUntil: null as Date | null, // [NEW]
+    repeatUntil: null as Date | null,
   });
   
   const [loading, setLoading] = useState(false);
@@ -97,6 +96,11 @@ export default function EditClassModal({ isOpen, onClose, classData, onClassUpda
         .join(', ');
     const displayString = `${dayLabels} ${formData.startTime} - ${formData.endTime}`;
 
+    const scheduleChanged = 
+        formData.startTime !== classData.startTime ||
+        formData.endTime !== classData.endTime ||
+        JSON.stringify(formData.repeatDays.sort()) !== JSON.stringify(classData.repeatDays?.sort());
+
     const { error } = await supabase
       .from('classes')
       .update({
@@ -114,15 +118,23 @@ export default function EditClassModal({ isOpen, onClose, classData, onClassUpda
       })
       .eq('id', classData.id);
 
-    setLoading(false);
-
     if (error) {
-      showToast('Error', 'Failed to update class.', 'error');
-    } else {
-      showToast('Success', 'Class updated successfully!', 'success');
-      onClassUpdated();
-      onClose();
+        setLoading(false);
+        showToast('Error', 'Failed to update class.', 'error');
+        return;
     }
+
+    if (scheduleChanged) {
+        await supabase
+            .from('enrollments')
+            .update({ conflict_report: null })
+            .eq('class_id', classData.id);
+    }
+
+    setLoading(false);
+    showToast('Success', 'Class updated successfully!', 'success');
+    onClassUpdated();
+    onClose();
   };
 
   if (!isOpen) return null;

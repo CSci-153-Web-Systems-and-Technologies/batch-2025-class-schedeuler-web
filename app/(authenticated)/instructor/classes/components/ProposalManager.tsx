@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
 import { Button } from "@/app/components/ui/Button";
-import { Vote, Check, X, AlertTriangle, Gavel } from 'lucide-react';
+import { Vote, Check, X, Gavel } from 'lucide-react';
 import { useSubjects } from '@/app/(authenticated)/student/subjects/SubjectContext';
 
 interface Proposal {
@@ -113,6 +113,11 @@ export default function ProposalManager() {
         }
 
         await supabase
+            .from('enrollments')
+            .update({ conflict_report: null })
+            .eq('class_id', proposal.class_id);
+
+        await supabase
             .from('proposals')
             .update({ status: 'applied' })
             .eq('id', proposal.id);
@@ -137,9 +142,9 @@ export default function ProposalManager() {
         }
 
         if (force) {
-            showToast("Force Applied", "Schedule updated by instructor override.", "warning");
+            showToast("Force Applied", "Schedule updated. Conflicts cleared.", "warning");
         } else {
-            showToast("Success", "Proposal passed and schedule updated!", "success");
+            showToast("Success", "Proposal passed. Schedule updated and conflicts resolved.", "success");
         }
 
         setProposals(prev => prev.filter(p => p.id !== proposal.id));
