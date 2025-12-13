@@ -50,13 +50,16 @@ export default function StudentMobileSidebar({
   }, [isOpen]);
 
   const handleLogout = async () => {
+    onClose();
+    
+    showToast("Logging out...", "Please wait while we sign you out.", "info");
+
     const result = await logout();
     if (result?.success) {
       router.push((result.redirectUrl || '/landing') + '?toast=logout');
     } else {
       showToast("Error", "Logout failed", "error");
     }
-    onClose();
   };
 
   const getIcon = (type: string) => {
