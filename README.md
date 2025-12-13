@@ -99,7 +99,7 @@ The application relies on the following Supabase tables:
 
 1.  **Clone the repository:**
     ```bash
-    git clone git@github.com:BinongoIsrael/class-schedeuler.git
+    git clone https://github.com/CSci-153-Web-Systems-and-Technologies/batch-2025-class-schedeuler-web.git
     cd schedeuler
     ```
 
@@ -134,7 +134,7 @@ Create a `.env.local` file in the root directory. You must configure these keys 
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin Key for role synchronization (Bypasses RLS) | **Yes** |
 | `GMAIL_USER` | Email address for sending bug reports | **Yes** |
 | `GMAIL_APP_PASSWORD` | App Password for the Gmail account above | **Yes** |
-| `NEXT_PUBLIC_SITE_URL` | Production URL (e.g., `https://schedeuler.vercel.app`) | **Yes** |
+| `NEXT_PUBLIC_SITE_URL` | Production URL (e.g., `https://schedeuler-web.vercel.app`) | **Yes** |
 
 > **⚠️ Security Note:** Never commit `.env.local` to version control. The `SUPABASE_SERVICE_ROLE_KEY` is highly sensitive and grants full database access.
 
@@ -155,7 +155,7 @@ The project is optimized for deployment on **Vercel**.
 
 | Environment | Status | Branch | URL |
 | :--- | :--- | :--- | :--- |
-| **Production** | 🟢 Live | `main` | [https://class-schedeuler.vercel.app/](https://class-schedeuler.vercel.app/) |
+| **Production** | 🟢 Live | `main` | [https://schedeuler-web.vercel.app](https://schedeuler-web.vercel.app]) |
 | **Staging** | 🟡 Testing | `develop` | *internal* |
 
 ---
@@ -164,13 +164,22 @@ The project is optimized for deployment on **Vercel**.
 
 | Release Version | Date Released | Type |
 |-----------------|---------------|------|
+| v1.0.3          | 2025-12-14    | Bug Fixes & Realtime Updates |
 | v1.0.2          | 2025-12-12    | Optimization & Mobile Support |
 | v1.0.1          | 2025-12-11    | Feature Update & UI Fixes |
 | v1.0.0          | 2025-12-10    | Initial Deployment (Bug Testing) |
 
+### v1.0.3 Release Notes
+**What's New & Fixed**
+- **⚡ Real-time Updates:** The Instructor dashboard now instantly reflects status changes (e.g., when a "Conflict" is resolved by editing a schedule).
+- **🐛 Smart Suggest Logic Fix:** Corrected an issue where the suggestion engine would propose timeslots that conflicted with a student's existing manual subjects or exams.
+- **🚪 Logout UX:** Added a confirmation toast notification upon successful logout for better user feedback.
+- **🔒 Security Update:** Refined Row Level Security (RLS) policies to allow instructors to properly clear conflict flags on student enrollments.
+
 ### v1.0.2 Release Notes
 **What's New**
-- **⚡ Dashboard Optimization:** - Migrated initial data fetching to Server Components for instant page loads.
+- **⚡ Dashboard Optimization:**
+  - Migrated initial data fetching to Server Components for instant page loads.
   - Added "Skeleton" loading states to eliminate layout shifts.
   - Replaced `moment.js` with `date-fns` to significantly reduce bundle size.
 - **📱 Responsive Improvements:**
@@ -209,4 +218,4 @@ The project is optimized for deployment on **Vercel**.
 
 ---
 
-**Current Version:** 1.0.1
+**Current Version:** 1.0.3
