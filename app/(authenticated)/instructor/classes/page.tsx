@@ -1,11 +1,13 @@
+// app/(authenticated)/instructor/classes/page.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+// ... (imports remain the same)
 import { createClient } from "@/utils/supabase/client";
 import dynamic from "next/dynamic";
 import { 
   Search, Filter, MoreHorizontal, BookOpen, Users, AlertCircle, 
-  Calendar, MapPin, Edit, Clock, Trash2, Plus, Copy, ChevronRight
+  Calendar, MapPin, Edit, Clock, Trash2, Plus, Copy
 } from "lucide-react";
 import AppBreadcrumb from "@/app/components/ui/AppBreadCrumb";
 import { Button } from "@/app/components/ui/Button";
@@ -22,12 +24,14 @@ import { useToast } from "@/app/context/ToastContext";
 import { useThemeContext } from "@/app/(authenticated)/components/ThemeContext";
 import { useSubjects } from "@/app/(authenticated)/student/subjects/SubjectContext";
 
+// ... (dynamic imports remain same)
 const CreateClassModal = dynamic(() => import("../dashboard/components/CreateClassModal"), { ssr: false });
 const EditClassModal = dynamic(() => import("./components/EditClassModal"), { ssr: false });
 const ViewStudentsModal = dynamic(() => import("./components/ViewStudentsModal"), { ssr: false });
 const SuggestTimeModal = dynamic(() => import("./components/SuggestTimeModal"), { ssr: false });
 const ProposalManager = dynamic(() => import("./components/ProposalManager"), { ssr: false });
 
+// ... (Interface ClassItem and helper functions remain same)
 interface ClassItem {
   id: string;
   name: string;
@@ -73,6 +77,7 @@ const getBadgeStyle = (type: string, isDark: boolean = false) => {
 };
 
 export default function InstructorClassesPage() {
+  // ... (State hooks remain the same)
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,6 +133,7 @@ export default function InstructorClassesPage() {
                 
                 enrollmentDetails[classId] = enrollmentDetails[classId] || { count: 0, conflicts: 0 };
                 enrollmentDetails[classId].count++;
+                
                 if (hasConflict) {
                     enrollmentDetails[classId].conflicts++;
                     totalConflictCount++; 
@@ -194,6 +200,7 @@ export default function InstructorClassesPage() {
     fetchClasses();
   }, [fetchClasses]);
 
+  // ... (Realtime useEffect remains the same)
   useEffect(() => {
     let channel: any;
     const setupRealtime = async () => {
@@ -210,7 +217,10 @@ export default function InstructorClassesPage() {
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'enrollments' },
-          () => fetchClasses()
+          (payload) => {
+              console.log('Realtime: Enrollment update detected, refreshing list...');
+              fetchClasses();
+          }
         )
         .subscribe();
     };
@@ -227,9 +237,7 @@ export default function InstructorClassesPage() {
 
   const handleDeleteClass = async (id: string) => {
     if(!confirm("Are you sure you want to delete this class?")) return;
-    
     setClasses(prev => prev.filter(c => c.id !== id));
-
     const { error } = await supabase.from("classes").delete().eq("id", id);
     if(error) {
         showToast("Error", "Failed to delete class", "error");
@@ -243,11 +251,8 @@ export default function InstructorClassesPage() {
 
   const handleArchiveClass = async (cls: ClassItem) => {
     const newStatus = cls.status === 'Archived' ? 'Active' : 'Archived';
-    
     setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, status: newStatus } : c));
-
     const { error } = await supabase.from('classes').update({ status: newStatus }).eq('id', cls.id);
-    
     if (error) {
         showToast("Error", "Failed to update status", "error");
         setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, status: cls.status } : c));
@@ -362,7 +367,7 @@ export default function InstructorClassesPage() {
         </Button>
       </div>
       
-      <ProposalManager />
+      <ProposalManager onScheduleUpdate={handleDataChange} />
 
       <div 
         className="p-4 rounded-xl shadow-sm border border-[var(--color-border)] mb-6 flex flex-col sm:flex-row gap-4"

@@ -17,7 +17,6 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/app/context/ToastContext";
 import NotificationPopover from "./NotificationPopover";
 import { cn } from "@/lib/utils"; 
-// [NEW] Import the utility function
 import { getInitialsWithoutMiddle } from "@/utils/stringUtils";
 
 interface TopbarProps {
@@ -30,8 +29,6 @@ interface TopbarProps {
   onMobileMenuToggle?: () => void;
   userRole?: 'student' | 'instructor'; 
 }
-
-// [REMOVED] Local getInitialsWithoutMiddle function
 
 export default function Topbar({
   title = "Dashboard",
@@ -59,7 +56,12 @@ export default function Topbar({
   const settingsHref = `/${userRole}/settings`;
 
   const handleLogout = async () => {
+    // 1. Immediate Feedback
+    showToast("Logging out...", "Please wait while we sign you out.", "info");
+    
+    // 2. Perform Logout
     const result = await logout();
+    
     if (result?.success) {
       router.push((result.redirectUrl || '/landing') + '?toast=logout');
     } else {
@@ -134,8 +136,9 @@ export default function Topbar({
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator className="bg-[var(--color-border)]" />
+                {/* [MODIFIED] Removed e.preventDefault() to allow menu to close immediately */}
                 <DropdownMenuItem 
-                  onSelect={(e) => { e.preventDefault(); handleLogout(); }} 
+                  onSelect={() => handleLogout()} 
                   className={`text-red-600 focus:text-red-700 focus:bg-red-50 dark:focus:bg-red-900/20 ${menuItemClass.replace('focus:text-[var(--color-text-primary)]', '')}`}
                 >
                   Log out

@@ -33,31 +33,62 @@ const formatDays = (days: number[]) => {
     return days.sort().map(d => DAYS_OF_WEEK[d]).join(', ');
 };
 
+const timeToDate = (timeStr: string) => {
+    const now = new Date();
+    if (!timeStr) return now;
+    const [h, m] = timeStr.split(':').map(Number);
+    const d = new Date(now);
+    d.setHours(h, m, 0, 0);
+    return d;
+};
+
 const fetchStudentBusyTimes = async (classId: string, supabase: any): Promise<{ [studentId: string]: CalendarEvent[] }> => {
-    const { data: enrollments } = await supabase
+    // 1. Get IDs of students enrolled in the CURRENT class
+    const { data: currentEnrollments } = await supabase
         .from('enrollments')
         .select('student_id')
         .eq('class_id', classId)
         .eq('status', 'approved');
 
-    if (!enrollments || enrollments.length === 0) return {};
+    if (!currentEnrollments || currentEnrollments.length === 0) return {};
 
-    const studentIds = enrollments.map((e: any) => e.student_id);
+    const studentIds = currentEnrollments.map((e: any) => e.student_id);
 
-    const { data: studentEvents } = await supabase
+    const { data: studentManualEvents } = await supabase
         .from('events')
         .select(`
             id, title, type, start_time, end_time, subject_code, user_id, 
             color, repeat_pattern, repeat_days, repeat_until, exclude_dates
         `)
         .in('user_id', studentIds)
-        .in('type', [EventType.SUBJECT, EventType.EXAM]);
+        .in('type', [EventType.SUBJECT, EventType.EXAM]); 
 
-    if (!studentEvents) return {};
-    
+    const { data: otherClassEnrollments } = await supabase
+        .from('enrollments')
+        .select(`
+            student_id,
+            classes (
+                id, name, start_time, end_time, repeat_days, repeat_until, subject_code, location
+            )
+        `)
+        .in('student_id', studentIds)
+        .eq('status', 'approved')
+        .neq('class_id', classId);
+
     const groupedEvents: { [studentId: string]: CalendarEvent[] } = {};
-    studentEvents.forEach((item: any) => {
-        const studentId = item.user_id;
+
+    studentManualEvents?.forEach((item: any) => {
+        const studentId = item.user_id;    
+
+        const safeRepeatDays = Array.isArray(item.repeat_days) 
+            ? item.repeat_days.map((d: any) => Number(d)) 
+            : [];
+
+        let pattern = item.repeat_pattern as RepeatPattern;
+        if (item.type === EventType.SUBJECT && safeRepeatDays.length > 0) {
+             pattern = RepeatPattern.WEEKLY;
+        }
+
         const mappedEvent: CalendarEvent = {
             id: item.id,
             title: item.title,
@@ -66,15 +97,43 @@ const fetchStudentBusyTimes = async (classId: string, supabase: any): Promise<{ 
             end: new Date(item.end_time),
             color: item.color,
             subjectCode: item.subject_code,
-            repeatPattern: item.repeat_pattern as RepeatPattern,
-            repeatDays: item.repeat_days || [],
+            repeatPattern: pattern || RepeatPattern.NONE,
+            repeatDays: safeRepeatDays,
+            repeatUntil: item.repeat_until ? new Date(item.repeat_until) : undefined,
+            excludeDates: item.exclude_dates ? item.exclude_dates.map((d: string) => new Date(d)) : []
         };
         groupedEvents[studentId] = [...(groupedEvents[studentId] || []), mappedEvent];
     });
 
+    otherClassEnrollments?.forEach((enrollment: any) => {
+        const cls = enrollment.classes;
+        if (!cls) return;
+        
+        const studentId = enrollment.student_id;
+        
+        const safeRepeatDays = Array.isArray(cls.repeat_days) 
+            ? cls.repeat_days.map((d: any) => Number(d)) 
+            : [];
+
+        const mappedClassEvent: CalendarEvent = {
+            id: `class_${cls.id}`, 
+            title: cls.name,
+            type: EventType.SUBJECT, 
+            start: timeToDate(cls.start_time),
+            end: timeToDate(cls.end_time),
+            color: '#808080', 
+            subjectCode: cls.subject_code,
+            location: cls.location,
+            repeatPattern: RepeatPattern.WEEKLY, 
+            repeatDays: safeRepeatDays,
+            repeatUntil: cls.repeat_until ? new Date(cls.repeat_until) : undefined
+        };
+
+        groupedEvents[studentId] = [...(groupedEvents[studentId] || []), mappedClassEvent];
+    });
+
     return groupedEvents;
 };
-
 export default function SuggestTimeModal({ isOpen, onClose, classData, onScheduleUpdated }: SuggestTimeModalProps) {
   const [loading, setLoading] = useState(false);
   const [duration, setDuration] = useState(90);

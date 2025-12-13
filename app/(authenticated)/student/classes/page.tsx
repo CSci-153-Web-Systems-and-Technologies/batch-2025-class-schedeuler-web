@@ -178,10 +178,26 @@ export default function StudentClassesPage() {
     const [sH, sM] = sTime.split(':').map(Number);
     const [eH, eM] = eTime.split(':').map(Number);
     
-    const start = new Date(now);
+    let targetDate = new Date(now);
+    
+    if (cls.repeatDays && cls.repeatDays.length > 0) {
+        const todayDay = now.getDay();
+        const sortedDays = [...cls.repeatDays].sort((a, b) => a - b);
+        
+        let nextDay = sortedDays.find(d => d >= todayDay);
+        
+        if (nextDay === undefined) {
+            nextDay = sortedDays[0];
+        }
+        
+        const daysToAdd = (nextDay + 7 - todayDay) % 7;
+        targetDate.setDate(now.getDate() + daysToAdd);
+    }
+
+    const start = new Date(targetDate);
     start.setHours(sH, sM, 0, 0);
     
-    const end = new Date(now);
+    const end = new Date(targetDate);
     end.setHours(eH, eM, 0, 0);
 
     const event: CalendarEvent = {

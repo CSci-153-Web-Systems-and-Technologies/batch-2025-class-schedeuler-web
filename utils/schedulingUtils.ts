@@ -1,4 +1,5 @@
-import { addMinutes, format, set, addDays, isBefore, isAfter, differenceInMinutes } from "date-fns";
+// utils/schedulingUtils.ts
+import { addMinutes, format, set, addDays, isBefore, isAfter } from "date-fns";
 import { CalendarEvent } from "@/types/calendar";
 import { generateRecurringEvents } from "@/utils/calendarUtils";
 
@@ -41,12 +42,12 @@ export const findPatternSlots = (
 
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  // [OPTIMIZATION] Replaced moment.add(7, 'days') with date-fns addDays
   const searchWindowEnd = addDays(now, 7);
 
   const busyInstances: { start: Date; end: Date }[] = [];
+  
   allBusyEvents.forEach((busyEvent) => {
-    const instances = generateRecurringEvents([busyEvent.event], now, "week").filter(
+    const instances = generateRecurringEvents([busyEvent.event], now, "agenda").filter(
       (instance) => instance.start >= now && instance.start <= searchWindowEnd
     );
 
@@ -81,6 +82,7 @@ export const findPatternSlots = (
       for (const dayIndex of combination) {
         let checkDate = new Date(now);
         const todayIndex = checkDate.getDay();
+        
         const daysUntil = (dayIndex + 7 - todayIndex) % 7;
         checkDate.setDate(checkDate.getDate() + daysUntil);
 
@@ -88,7 +90,6 @@ export const findPatternSlots = (
         const specificStart = set(checkDate, { hours: h, minutes: m });
         const specificEnd = addMinutes(specificStart, durationMinutes);
 
-        // [OPTIMIZATION] Replaced moment comparisons with date-fns
         const isBlocked = busyInstances.some((busy) =>
           isBefore(specificStart, busy.end) && isAfter(specificEnd, busy.start)
         );
