@@ -1,10 +1,11 @@
+// app/(authenticated)/instructor/classes/components/ProposalManager.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/app/context/ToastContext';
 import { Button } from "@/app/components/ui/Button";
-import { Vote, Check, X, Gavel } from 'lucide-react';
+import { Vote, Check, X, Gavel, Clock } from 'lucide-react'; 
 import { useSubjects } from '@/app/(authenticated)/student/subjects/SubjectContext';
 
 interface Proposal {
@@ -24,7 +25,11 @@ interface Proposal {
     votes_total: number;
 }
 
-export default function ProposalManager() {
+interface ProposalManagerProps {
+    onScheduleUpdate?: () => void;
+}
+
+export default function ProposalManager({ onScheduleUpdate }: ProposalManagerProps) {
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [loading, setLoading] = useState(true);
     const supabase = createClient();
@@ -67,7 +72,8 @@ export default function ProposalManager() {
                 enhancedProposals.push({
                     ...p,
                     votes_for: yesVotes || 0,
-                    votes_total: totalStudents || 0
+                    votes_total: totalStudents || 0,
+                    classes: Array.isArray(p.classes) ? p.classes[0] : p.classes
                 });
             }
 
@@ -112,10 +118,14 @@ export default function ProposalManager() {
             return;
         }
 
-        await supabase
+        const { error: enrollError } = await supabase
             .from('enrollments')
-            .update({ conflict_report: null })
+            .update({ conflict_report: null }) 
             .eq('class_id', proposal.class_id);
+
+        if (enrollError) {
+             console.error("Failed to clear conflicts (RLS issue?):", enrollError);
+        }
 
         await supabase
             .from('proposals')
@@ -149,6 +159,10 @@ export default function ProposalManager() {
 
         setProposals(prev => prev.filter(p => p.id !== proposal.id));
         refreshSubjects();
+        
+        if (onScheduleUpdate) {
+            onScheduleUpdate();
+        }
     };
 
     const handleCancel = async (id: string) => {
@@ -196,7 +210,10 @@ export default function ProposalManager() {
 
                                 <div className="mb-4 p-3 rounded-lg bg-[var(--color-hover)] border border-[var(--color-border)]">
                                     <p className="text-xs text-[var(--color-text-secondary)] uppercase font-bold mb-1">Proposed Change</p>
-                                    <p className="text-sm font-semibold text-[var(--color-primary)] break-all">{p.display_string}</p>
+                                    <div className="flex items-center gap-2 text-[var(--color-primary)]">
+                                        <Clock size={16} />
+                                        <p className="text-sm font-semibold break-all">{p.display_string}</p>
+                                    </div>
                                 </div>
 
                                 <div className="mb-1 flex justify-between text-xs font-medium text-[var(--color-text-primary)]">
